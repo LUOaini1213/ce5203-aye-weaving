@@ -1,0 +1,12 @@
+<?xml version="1.0" ?>
+<connections>
+    <connection from="E_main_in" to="E_weaving" fromLane="0" toLane="1"/>
+    <connection from="E_main_in" to="E_weaving" fromLane="1" toLane="2"/>
+    <connection from="E_main_in" to="E_weaving" fromLane="2" toLane="3"/>
+    <connection from="E_on_ramp_2" to="E_weaving" fromLane="0" toLane="0"/>
+    <connection from="E_weaving" to="E_main_out" fromLane="1" toLane="0"/>
+    <connection from="E_weaving" to="E_main_out" fromLane="2" toLane="1"/>
+    <connection from="E_weaving" to="E_main_out" fromLane="3" toLane="2"/>
+    <connection from="E_weaving" to="E_off_ramp" fromLane="0" toLane="0"/>
+    <connection from="E_weaving" to="E_off_ramp" fromLane="1" toLane="1"/>
+</connections>

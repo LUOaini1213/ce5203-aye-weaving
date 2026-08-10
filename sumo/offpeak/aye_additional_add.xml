@@ -1,0 +1,10 @@
+<?xml version="1.0" ?>
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+    <inductionLoop id="det_main_in" lane="E_main_in_1" pos="0" freq="60" file="main_in_output.xml"/>
+    <inductionLoop id="det_weaving" lane="E_weaving_1" pos="0" freq="60" file="weaving_output.xml"/>
+    <inductionLoop id="det_main_out" lane="E_main_out_1" pos="0" freq="60" file="main_out_output.xml"/>
+    <inductionLoop id="det_on_ramp_1" lane="E_on_ramp_1_0" pos="0" freq="60" file="on_ramp_output.xml"/>
+    <inductionLoop id="det_off_ramp_0" lane="E_off_ramp_0" pos="0" freq="60" file="off_ramp_lane0_output.xml"/>
+    <inductionLoop id="det_off_ramp_1" lane="E_off_ramp_1" pos="0" freq="60" file="off_ramp_lane1_output.xml"/>
+    <edgeData id="edge_dump" freq="60" file="edge_data_output.xml" excludeEmpty="true"/>
+</additional>

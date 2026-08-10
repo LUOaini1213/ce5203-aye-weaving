@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-04-07 23:07:55 by Eclipse SUMO netconvert Version 1.24.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="aye_nodes_nod.xml"/>
+        <edge-files value="aye_edges_edg.xml"/>
+        <connection-files value="aye_connections_con.xml"/>
+    </input>
+
+    <output>
+        <output-file value="aye_bottleneck_net.xml"/>
+    </output>
+
+    <processing>
+        <offset.disable-normalization value="true"/>
+        <lefthand value="true"/>
+    </processing>
+
+    <tls_building>
+        <tls.guess value="true"/>
+    </tls_building>
+
+    <junctions>
+        <no-turnarounds value="true"/>
+    </junctions>
+
+</netconvertConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" lefthand="true" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,-0.00" convBoundary="200.00,-50.00,1300.00,0.00" origBoundary="200.00,-50.00,1300.00,0.00" projParameter="!"/>
+
+    <edge id=":diverge_node_0" function="internal">
+        <lane id=":diverge_node_0_0" index="0" speed="20.84" length="20.81" shape="579.19,-11.20 573.01,-11.49 568.79,-12.30 564.69,-13.57 558.88,-15.23"/>
+        <lane id=":diverge_node_0_1" index="1" speed="20.84" length="21.59" shape="579.19,-8.00 572.73,-8.30 568.26,-9.15 563.98,-10.46 558.11,-12.12"/>
+    </edge>
+    <edge id=":diverge_node_2" function="internal">
+        <lane id=":diverge_node_2_0" index="0" speed="25.00" length="21.59" shape="579.19,-8.00 557.60,-8.00"/>
+        <lane id=":diverge_node_2_1" index="1" speed="25.00" length="21.59" shape="579.19,-4.80 557.60,-4.80"/>
+        <lane id=":diverge_node_2_2" index="2" speed="25.00" length="21.59" shape="579.19,-1.60 557.60,-1.60"/>
+    </edge>
+    <edge id=":merge_node_0" function="internal">
+        <lane id=":merge_node_0_0" index="0" speed="20.84" length="3.38" shape="939.85,-11.61 938.87,-11.37 938.20,-11.25 937.51,-11.21 936.51,-11.20"/>
+    </edge>
+    <edge id=":merge_node_1" function="internal">
+        <lane id=":merge_node_1_0" index="0" speed="25.00" length="3.39" shape="939.90,-8.00 936.51,-8.00"/>
+        <lane id=":merge_node_1_1" index="1" speed="25.00" length="3.39" shape="939.90,-4.80 936.51,-4.80"/>
+        <lane id=":merge_node_1_2" index="2" speed="25.00" length="3.39" shape="939.90,-1.60 936.51,-1.60"/>
+    </edge>
+    <edge id=":tls_node_0" function="internal">
+        <lane id=":tls_node_0_0" index="0" speed="16.67" length="0.10" shape="999.61,-26.55 999.61,-26.55"/>
+    </edge>
+
+    <edge id="E_main_in" from="main_in" to="merge_node" priority="3">
+        <lane id="E_main_in_0" index="0" speed="25.00" length="360.10" shape="1300.00,-8.00 939.90,-8.00"/>
+        <lane id="E_main_in_1" index="1" speed="25.00" length="360.10" shape="1300.00,-4.80 939.90,-4.80"/>
+        <lane id="E_main_in_2" index="2" speed="25.00" length="360.10" shape="1300.00,-1.60 939.90,-1.60"/>
+    </edge>
+    <edge id="E_main_out" from="diverge_node" to="main_out" priority="3">
+        <lane id="E_main_out_0" index="0" speed="25.00" length="357.60" shape="557.60,-8.00 200.00,-8.00"/>
+        <lane id="E_main_out_1" index="1" speed="25.00" length="357.60" shape="557.60,-4.80 200.00,-4.80"/>
+        <lane id="E_main_out_2" index="2" speed="25.00" length="357.60" shape="557.60,-1.60 200.00,-1.60"/>
+    </edge>
+    <edge id="E_off_ramp" from="diverge_node" to="ramp_out_end" priority="1">
+        <lane id="E_off_ramp_0" index="0" speed="16.67" length="162.57" shape="558.88,-15.23 401.16,-54.66"/>
+        <lane id="E_off_ramp_1" index="1" speed="16.67" length="162.57" shape="558.11,-12.12 400.39,-51.55"/>
+    </edge>
+    <edge id="E_on_ramp_1" from="ramp_in_start" to="tls_node" priority="1">
+        <lane id="E_on_ramp_1_0" index="0" speed="16.67" length="103.08" shape="1099.61,-51.55 999.61,-26.55"/>
+    </edge>
+    <edge id="E_on_ramp_2" from="tls_node" to="merge_node" priority="1">
+        <lane id="E_on_ramp_2_0" index="0" speed="16.67" length="61.60" shape="999.61,-26.55 939.85,-11.61"/>
+    </edge>
+    <edge id="E_weaving" from="merge_node" to="diverge_node" priority="3">
+        <lane id="E_weaving_0" index="0" speed="25.00" length="357.32" acceleration="1" shape="936.51,-11.20 579.19,-11.20"/>
+        <lane id="E_weaving_1" index="1" speed="25.00" length="357.32" shape="936.51,-8.00 579.19,-8.00"/>
+        <lane id="E_weaving_2" index="2" speed="25.00" length="357.32" shape="936.51,-4.80 579.19,-4.80"/>
+        <lane id="E_weaving_3" index="3" speed="25.00" length="357.32" shape="936.51,-1.60 579.19,-1.60"/>
+    </edge>
+
+    <tlLogic id="tls_node" type="static" programID="0" offset="0">
+        <phase duration="81" state="G"/>
+        <phase duration="4"  state="y"/>
+        <phase duration="5"  state="r"/>
+    </tlLogic>
+
+    <junction id="diverge_node" type="priority" x="600.00" y="0.00" incLanes="E_weaving_0 E_weaving_1 E_weaving_2 E_weaving_3" intLanes=":diverge_node_0_0 :diverge_node_0_1 :diverge_node_2_0 :diverge_node_2_1 :diverge_node_2_2" shape="579.19,-12.80 579.19,-0.00 557.60,-0.00 557.60,-9.60 557.72,-10.57 559.27,-16.78 563.46,-15.63 566.56,-14.65 569.12,-13.87 571.70,-13.28 574.87,-12.92">
+        <request index="0" response="00000" foes="00000" cont="0"/>
+        <request index="1" response="00000" foes="00000" cont="0"/>
+        <request index="2" response="00000" foes="00000" cont="0"/>
+        <request index="3" response="00000" foes="00000" cont="0"/>
+        <request index="4" response="00000" foes="00000" cont="0"/>
+    </junction>
+    <junction id="main_in" type="dead_end" x="1300.00" y="0.00" incLanes="" intLanes="" shape="1300.00,-0.00 1300.00,-9.60"/>
+    <junction id="main_out" type="dead_end" x="200.00" y="0.00" incLanes="E_main_out_0 E_main_out_1 E_main_out_2" intLanes="" shape="200.00,-9.60 200.00,-0.00"/>
+    <junction id="merge_node" type="priority" x="900.00" y="0.00" incLanes="E_on_ramp_2_0 E_main_in_0 E_main_in_1 E_main_in_2" intLanes=":merge_node_0_0 :merge_node_1_0 :merge_node_1_1 :merge_node_1_2" shape="939.46,-13.16 940.24,-10.06 939.90,-9.60 939.90,-0.00 936.51,-0.00 936.51,-12.80 937.61,-12.81 938.00,-12.85 938.38,-12.91 938.84,-13.01">
+        <request index="0" response="0000" foes="0000" cont="0"/>
+        <request index="1" response="0000" foes="0000" cont="0"/>
+        <request index="2" response="0000" foes="0000" cont="0"/>
+        <request index="3" response="0000" foes="0000" cont="0"/>
+    </junction>
+    <junction id="ramp_in_start" type="dead_end" x="1100.00" y="-50.00" incLanes="" intLanes="" shape="1100.00,-50.00 1099.22,-53.10"/>
+    <junction id="ramp_out_end" type="dead_end" x="400.00" y="-50.00" incLanes="E_off_ramp_0 E_off_ramp_1" intLanes="" shape="401.55,-56.21 400.00,-50.00"/>
+    <junction id="tls_node" type="traffic_light" x="1000.00" y="-25.00" incLanes="E_on_ramp_1_0" intLanes=":tls_node_0_0" shape="999.22,-28.10 1000.00,-25.00 999.22,-28.10">
+        <request index="0" response="0" foes="0" cont="0"/>
+    </junction>
+
+    <connection from="E_main_in" to="E_weaving" fromLane="0" toLane="1" via=":merge_node_1_0" dir="s" state="M"/>
+    <connection from="E_main_in" to="E_weaving" fromLane="1" toLane="2" via=":merge_node_1_1" dir="s" state="M"/>
+    <connection from="E_main_in" to="E_weaving" fromLane="2" toLane="3" via=":merge_node_1_2" dir="s" state="M"/>
+    <connection from="E_on_ramp_1" to="E_on_ramp_2" fromLane="0" toLane="0" via=":tls_node_0_0" tl="tls_node" linkIndex="0" dir="s" state="O"/>
+    <connection from="E_on_ramp_2" to="E_weaving" fromLane="0" toLane="0" via=":merge_node_0_0" dir="s" state="M"/>
+    <connection from="E_weaving" to="E_off_ramp" fromLane="0" toLane="0" via=":diverge_node_0_0" dir="L" state="M"/>
+    <connection from="E_weaving" to="E_off_ramp" fromLane="1" toLane="1" via=":diverge_node_0_1" dir="L" state="M"/>
+    <connection from="E_weaving" to="E_main_out" fromLane="1" toLane="0" via=":diverge_node_2_0" dir="s" state="M"/>
+    <connection from="E_weaving" to="E_main_out" fromLane="2" toLane="1" via=":diverge_node_2_1" dir="s" state="M"/>
+    <connection from="E_weaving" to="E_main_out" fromLane="3" toLane="2" via=":diverge_node_2_2" dir="s" state="M"/>
+
+    <connection from=":diverge_node_0" to="E_off_ramp" fromLane="0" toLane="0" dir="L" state="M"/>
+    <connection from=":diverge_node_0" to="E_off_ramp" fromLane="1" toLane="1" dir="L" state="M"/>
+    <connection from=":diverge_node_2" to="E_main_out" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":diverge_node_2" to="E_main_out" fromLane="1" toLane="1" dir="s" state="M"/>
+    <connection from=":diverge_node_2" to="E_main_out" fromLane="2" toLane="2" dir="s" state="M"/>
+    <connection from=":merge_node_0" to="E_weaving" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":merge_node_1" to="E_weaving" fromLane="0" toLane="1" dir="s" state="M"/>
+    <connection from=":merge_node_1" to="E_weaving" fromLane="1" toLane="2" dir="s" state="M"/>
+    <connection from=":merge_node_1" to="E_weaving" fromLane="2" toLane="3" dir="s" state="M"/>
+    <connection from=":tls_node_0" to="E_on_ramp_2" fromLane="0" toLane="0" dir="s" state="M"/>
+
+</net>

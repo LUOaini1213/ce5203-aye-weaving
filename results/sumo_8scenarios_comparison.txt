@@ -1,0 +1,50 @@
+AYE Bottleneck — 8-Scenario SUMO Simulation Results
+Settings: sublane (lateral-resolution=0.8m), step=0.5s, libsumo, seed=42, end=5400s
+====================================================================================================
+
+========= PEAK =========
+Metric                          |      Base|       VSL|      Δ%|        RM|      Δ%|    VSL+RM|      Δ%
+----------------------------------------------------------------------------------------------------
+Capacity (veh/h)                |    6457.6|    6286.7|   -2.6%|    7209.3|  +11.6%|    6390.8|   -1.0%
+Throughput (veh/h)              |    4582.9|    4091.1|  -10.7%|    4736.5|   +3.4%|    4219.8|   -7.9%
+Avg Delay (s/veh)               |      11.9|      13.2|  +10.8%|      11.0|   -7.7%|      13.8|  +16.1%
+Avg Queue Length (veh)          |      17.2|      17.0|   -1.2%|      15.7|   -8.9%|      17.2|   -0.1%
+Avg Time in Queue (s/veh)       |       0.5|       0.5|   +4.6%|       0.2|  -52.2%|       0.5|  +15.4%
+Avg Excess Accumulation (veh)   |      17.2|      17.0|   -1.2%|      15.7|   -8.9%|      17.2|   -0.1%
+Avg Weaving Speed (km/h)        |      49.0|      47.1|   -3.8%|      50.8|   +3.8%|      45.8|   -6.5%
+Net Total TimeLoss (veh-s)      |  143396.6|  173427.1|  +20.9%|  110833.5|  -22.7%|  173335.5|  +20.9%
+Avg Network Delay (s/veh)       |      31.9|      38.6|  +20.9%|      24.7|  -22.7%|      38.6|  +20.9%
+
+========= OFFPEAK =========
+Metric                          |      Base|       VSL|      Δ%|        RM|      Δ%|    VSL+RM|      Δ%
+----------------------------------------------------------------------------------------------------
+Capacity (veh/h)                |    6752.6|    6471.4|   -4.2%|    7402.0|   +9.6%|    6392.6|   -5.3%
+Throughput (veh/h)              |    5171.2|    4658.4|   -9.9%|    4926.0|   -4.7%|    4409.8|  -14.7%
+Avg Delay (s/veh)               |       9.3|      12.5|  +34.5%|       8.7|   -7.1%|      10.7|  +14.9%
+Avg Queue Length (veh)          |      15.1|      18.3|  +20.6%|      13.5|  -10.6%|      14.9|   -1.7%
+Avg Time in Queue (s/veh)       |       0.1|       0.3| +285.9%|       0.1|  -32.1%|       0.2| +129.5%
+Avg Excess Accumulation (veh)   |      15.1|      18.3|  +20.6%|      13.5|  -10.6%|      14.9|   -1.7%
+Avg Weaving Speed (km/h)        |      53.5|      47.7|  -10.9%|      55.1|   +3.0%|      51.4|   -4.0%
+Net Total TimeLoss (veh-s)      |   89050.3|  167590.0|  +88.2%|   86585.3|   -2.8%|  140242.1|  +57.5%
+Avg Network Delay (s/veh)       |      16.2|      30.5|  +88.2%|      15.8|   -2.8%|      25.5|  +57.5%
+
+====================================================================================================
+KEY FINDINGS
+====================================================================================================
+
+1. RAMP METERING (RM) — only consistently beneficial strategy
+   • Peak: avg delay -7.7%, capacity +11.6%, network timeloss -22.7%
+   • Off-peak: marginal (-2.8% timeloss)
+
+2. VSL (single-lane on E_weaving_0, 25→12 m/s @ occ>0.15)
+   • Hurts in both periods: peak +20.9% timeloss, off-peak +88.2%
+   • Reason: AYE bottleneck is lane-change-conflict-limited, not speed-limited.
+     Lowering speed on lane 0 holds back exit-bound traffic and worsens upstream queue.
+
+3. VSL + RM — worse than RM alone in both periods
+   • The VSL component drags the combined result down by ≈40%.
+   • Recommendation: deploy RM only; abandon VSL on this section.
+
+4. OFF-PEAK is already near free-flow (53.5 km/h, 9.3 s/veh delay)
+   • Any active control measure has limited upside, and VSL is actively harmful.
+

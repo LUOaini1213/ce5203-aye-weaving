@@ -1,0 +1,31 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Large / private media (do not commit)
+*.mp4
+*.avi
+*.mov
+*.mkv
+**/yolo11*/
+**/*openvino*/
+**/weights/
+*.pt
+*.onnx
+
+# SUMO runtime junk
+**/sumo_log*
+**/*-output.xml.bak
+
+# Local packages
+*.zip

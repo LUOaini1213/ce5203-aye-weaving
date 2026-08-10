@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<edges>
+    <edge id="E_main_in" from="main_in" to="merge_node" priority="3" numLanes="3" speed="25.0"/>
+    <edge id="E_on_ramp_1" from="ramp_in_start" to="tls_node" priority="1" numLanes="1" speed="16.67"/>
+    <edge id="E_on_ramp_2" from="tls_node" to="merge_node" priority="1" numLanes="1" speed="16.67"/>
+    <edge id="E_weaving" from="merge_node" to="diverge_node" priority="3" numLanes="4" speed="25.0"/>
+    <edge id="E_main_out" from="diverge_node" to="main_out" priority="3" numLanes="3" speed="25.0"/>
+    <edge id="E_off_ramp" from="diverge_node" to="ramp_out_end" priority="1" numLanes="2" speed="16.67"/>
+</edges>

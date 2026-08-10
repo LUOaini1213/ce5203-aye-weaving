@@ -1,0 +1,10 @@
+<?xml version="1.0" ?>
+<nodes>
+    <node id="main_in" x="1300.0" y="0.0" type="priority"/>
+    <node id="merge_node" x="900.0" y="0.0" type="priority"/>
+    <node id="diverge_node" x="600.0" y="0.0" type="priority"/>
+    <node id="main_out" x="200.0" y="0.0" type="priority"/>
+    <node id="ramp_in_start" x="1100.0" y="-50.0" type="priority"/>
+    <node id="tls_node" x="1000.0" y="-25.0" type="traffic_light"/>
+    <node id="ramp_out_end" x="400.0" y="-50.0" type="priority"/>
+</nodes>
