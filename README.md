@@ -8,7 +8,7 @@ NUS CE5203 *Traffic Flow and Control* — Course Project (Spring 2026) · Group 
 | **Site** | Singapore AYE westbound, Exit 9 → Exit 11 (≈373 m weaving section) |
 | **Pipeline** | Field video → **YOLOv11** counts/speeds → **SUMO** microsimulation → VSL / RM / VSL+RM |
 | **Key result** | Peak-period ramp metering cut network **total time loss by 22.7%** |
-| **Report** | [docs/CE5203_Group12_Report.pdf](docs/CE5203_Group12_Report.pdf) |
+| **Report** | [latex/report.tex](latex/report.tex) |
 
 > Course group project. Public mirror for portfolio / reproducibility.  
 > Contributors: Leong Sio Kuan · **Luo Wenjie** · Wang Xu · Zhao Jiaqing
@@ -109,3 +109,7 @@ Westbound Weaving Bottleneck. CE5203 Traffic Flow and Control, NUS, 2026.
 Coursework released for **educational / portfolio** use.  
 Do not redistribute raw field videos or third-party lecture slides.  
 SUMO is under EPL-2.0; YOLO/Ultralytics under their respective licenses.
+
+## Report and licence
+
+The compiled group report PDF has been removed from this repository because it carried the four authors' student IDs; the LaTeX source under `latex/` is kept with the IDs removed. The PDF is available on request. `LICENSE` (MIT) covers the scripts and SUMO configs I wrote; the report source remains the joint work of Group 12.
