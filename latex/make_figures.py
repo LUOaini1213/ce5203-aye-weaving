@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Generate all figures for the LaTeX report."""
-import csv, os
+import csv, os, sys
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # the progress marks are non-ASCII
 import xml.etree.ElementTree as ET
 import numpy as np
 import matplotlib
@@ -20,12 +22,17 @@ plt.rcParams.update({
     "savefig.dpi": 200,
 })
 
-OUT = "/sessions/great-beautiful-albattani/mnt/outputs/latex/figs"
-SUMO = "/sessions/great-beautiful-albattani/mnt/outputs/sumo_runs"
+# Everything is resolved relative to the repository, so the script runs from a
+# clone: results from results/, demand from sumo/, figures into latex/figs
+# (override the output folder with CE5203_FIG_OUT).
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.environ.get("CE5203_FIG_OUT", os.path.join(ROOT, "latex", "figs"))
+RESULTS_CSV = os.path.join(ROOT, "results", "sumo_12scenarios_results.csv")
+os.makedirs(OUT, exist_ok=True)
 
 # Load 12 scenarios results
 RESULTS = {}
-with open(f"{SUMO}/all_results.csv") as f:
+with open(RESULTS_CSV, encoding="utf-8") as f:
     for row in csv.DictReader(f):
         RESULTS[(row["period"], row["scenario"])] = row
 
@@ -108,8 +115,8 @@ def parse_demand(xml):
         counts[m] = counts.get(m, 0) + 1
     return counts
 
-peak_d = parse_demand("/sessions/great-beautiful-albattani/mnt/5203project/peak/peak_demand_rou.xml")
-off_d  = parse_demand("/sessions/great-beautiful-albattani/mnt/5203project/offpeak/offpeak_demand_rou.xml")
+peak_d = parse_demand(os.path.join(ROOT, "sumo", "peak", "peak_demand_rou.xml"))
+off_d  = parse_demand(os.path.join(ROOT, "sumo", "offpeak", "offpeak_demand_rou.xml"))
 
 fig, ax = plt.subplots(figsize=(8.5, 3.2))
 xs_p = sorted(peak_d.keys()); ys_p = [peak_d[m] for m in xs_p]
@@ -259,7 +266,20 @@ print("✓ fig_improvement_heatmap.pdf")
 # -------------------------------------------------------------------
 # Figure 7 - Per-edge metrics from peak base SUMO output
 # -------------------------------------------------------------------
+def scen_path(period, scen):
+    """Where a scenario's SUMO edge-data output lives. The base cases are
+    committed under sumo/<period>/; the other scenario runs (rm, vsl, ...) were
+    produced by the group's scenario runner and are not in the repository, so
+    the figures that need them are skipped unless a sumo_runs/ folder is present."""
+    if scen == "base":
+        return os.path.join(ROOT, "sumo", period, "edge_data_output.xml")
+    cand = os.path.join(ROOT, "sumo_runs", f"{period}_{scen}", "edge_data_output.xml")
+    return cand if os.path.isfile(cand) else None
+
+
 def parse_edgedata(xml_path):
+    if xml_path is None or not os.path.isfile(xml_path):
+        return None
     tree = ET.parse(xml_path)
     intervals = []
     for itv in tree.getroot().findall("interval"):
@@ -269,51 +289,54 @@ def parse_edgedata(xml_path):
         intervals.append(rec)
     return intervals
 
-ints_pb = parse_edgedata(f"{SUMO}/peak_base/edge_data_output.xml")
-ints_pr = parse_edgedata(f"{SUMO}/peak_rm/edge_data_output.xml")
-ints_pv = parse_edgedata(f"{SUMO}/peak_vsl/edge_data_output.xml")
+ints_pb = parse_edgedata(scen_path("peak", "base"))
+ints_pr = parse_edgedata(scen_path("peak", "rm"))
+ints_pv = parse_edgedata(scen_path("peak", "vsl"))
 
-def series(ints, edge, key, default=0):
-    xs, ys = [], []
-    for r in ints:
-        if edge in r["edges"]:
-            xs.append(r["begin"]/60.0)
-            ys.append(r["edges"][edge].get(key, default))
-        else:
-            xs.append(r["begin"]/60.0); ys.append(default)
-    return xs, ys
+if ints_pr is None or ints_pv is None:
+    print("skip fig_timeseries.pdf: peak rm / vsl scenario outputs are not in the repository")
+else:
+    def series(ints, edge, key, default=0):
+        xs, ys = [], []
+        for r in ints:
+            if edge in r["edges"]:
+                xs.append(r["begin"]/60.0)
+                ys.append(r["edges"][edge].get(key, default))
+            else:
+                xs.append(r["begin"]/60.0); ys.append(default)
+        return xs, ys
 
-fig, axes = plt.subplots(2, 1, figsize=(8.5, 5.8), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=(8.5, 5.8), sharex=True)
 
-# (a) Speed on E_weaving across scenarios
-ax = axes[0]
-for label, ints, color in [("Base", ints_pb, "#37474f"),
-                             ("RM", ints_pr, "#2e7d32"),
-                             ("VSL (in-section)", ints_pv, "#c62828")]:
-    xs, ys = series(ints, "E_weaving", "speed")
-    ax.plot(xs, [y*3.6 for y in ys], lw=1.4, label=label, color=color)
-ax.axhline(90, ls=":", color="grey", lw=0.8); ax.text(2, 92, "free-flow 90 km/h", fontsize=8, color="grey")
-ax.set_ylabel("Weaving speed (km/h)")
-ax.set_title("(a) E$_{weaving}$ speed time series — Peak demand, three scenarios")
-ax.legend(loc="lower right")
-ax.grid(alpha=0.3); ax.set_ylim(20, 100)
+    # (a) Speed on E_weaving across scenarios
+    ax = axes[0]
+    for label, ints, color in [("Base", ints_pb, "#37474f"),
+                                 ("RM", ints_pr, "#2e7d32"),
+                                 ("VSL (in-section)", ints_pv, "#c62828")]:
+        xs, ys = series(ints, "E_weaving", "speed")
+        ax.plot(xs, [y*3.6 for y in ys], lw=1.4, label=label, color=color)
+    ax.axhline(90, ls=":", color="grey", lw=0.8); ax.text(2, 92, "free-flow 90 km/h", fontsize=8, color="grey")
+    ax.set_ylabel("Weaving speed (km/h)")
+    ax.set_title("(a) E$_{weaving}$ speed time series — Peak demand, three scenarios")
+    ax.legend(loc="lower right")
+    ax.grid(alpha=0.3); ax.set_ylim(20, 100)
 
-# (b) Density on E_weaving
-ax = axes[1]
-for label, ints, color in [("Base", ints_pb, "#37474f"),
-                             ("RM", ints_pr, "#2e7d32"),
-                             ("VSL (in-section)", ints_pv, "#c62828")]:
-    xs, ys = series(ints, "E_weaving", "density")
-    ax.plot(xs, ys, lw=1.4, label=label, color=color)
-ax.set_xlabel("Simulation time (minutes)")
-ax.set_ylabel("Density (veh/km)")
-ax.set_title("(b) E$_{weaving}$ density time series")
-ax.legend(loc="upper right")
-ax.grid(alpha=0.3)
-plt.tight_layout()
-plt.savefig(f"{OUT}/fig_timeseries.pdf")
-plt.close()
-print("✓ fig_timeseries.pdf")
+    # (b) Density on E_weaving
+    ax = axes[1]
+    for label, ints, color in [("Base", ints_pb, "#37474f"),
+                                 ("RM", ints_pr, "#2e7d32"),
+                                 ("VSL (in-section)", ints_pv, "#c62828")]:
+        xs, ys = series(ints, "E_weaving", "density")
+        ax.plot(xs, ys, lw=1.4, label=label, color=color)
+    ax.set_xlabel("Simulation time (minutes)")
+    ax.set_ylabel("Density (veh/km)")
+    ax.set_title("(b) E$_{weaving}$ density time series")
+    ax.legend(loc="upper right")
+    ax.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f"{OUT}/fig_timeseries.pdf")
+    plt.close()
+    print("✓ fig_timeseries.pdf")
 
 # -------------------------------------------------------------------
 # Figure 8 - Fundamental diagram (density-flow scatter from edge data)
@@ -322,7 +345,7 @@ fig, axes = plt.subplots(1, 2, figsize=(11, 4))
 
 for ax, ints, title, color in [
     (axes[0], ints_pb, "Peak Base", "#c62828"),
-    (axes[1], parse_edgedata(f"{SUMO}/offpeak_base/edge_data_output.xml"), "Off-Peak Base", "#1565c0")
+    (axes[1], parse_edgedata(scen_path("offpeak", "base")), "Off-Peak Base", "#1565c0")
 ]:
     xs, ys = [], []
     cs = []
@@ -387,26 +410,29 @@ print("✓ fig_vsl_placement.pdf")
 # -------------------------------------------------------------------
 # Figure 10 - Per-edge breakdown for peak base & peak RM
 # -------------------------------------------------------------------
-fig, ax = plt.subplots(figsize=(8.5, 4))
-edges = ["E_main_in","E_weaving","E_main_out","E_off_ramp","E_on_ramp_2"]
+if ints_pr is None:
+    print("skip fig_per_edge_speed.pdf: peak rm scenario output is not in the repository")
+else:
+    fig, ax = plt.subplots(figsize=(8.5, 4))
+    edges = ["E_main_in","E_weaving","E_main_out","E_off_ramp","E_on_ramp_2"]
 
-def avg_metric(ints, edge, key):
-    vs = [r["edges"][edge].get(key,0) for r in ints if edge in r["edges"]]
-    return sum(vs)/len(vs) if vs else 0
+    def avg_metric(ints, edge, key):
+        vs = [r["edges"][edge].get(key,0) for r in ints if edge in r["edges"]]
+        return sum(vs)/len(vs) if vs else 0
 
-avg_speed_pb = [avg_metric(ints_pb, e, "speed")*3.6 for e in edges]
-avg_speed_pr = [avg_metric(ints_pr, e, "speed")*3.6 for e in edges]
-xs = np.arange(len(edges))
-ax.bar(xs-0.2, avg_speed_pb, 0.4, label="Peak Base", color="#c62828", alpha=0.85)
-ax.bar(xs+0.2, avg_speed_pr, 0.4, label="Peak RM", color="#2e7d32", alpha=0.85)
-ax.set_xticks(xs); ax.set_xticklabels(edges, fontsize=9)
-ax.set_ylabel("Average speed (km/h)")
-ax.set_title("Per-edge average speed — Peak Base vs Peak RM")
-ax.axhline(90, ls=":", color="grey", lw=0.8); ax.text(0.1, 91, "free-flow 90 km/h", fontsize=8, color="grey")
-ax.legend(); ax.grid(axis="y", alpha=0.3)
-plt.tight_layout()
-plt.savefig(f"{OUT}/fig_per_edge_speed.pdf")
-plt.close()
-print("✓ fig_per_edge_speed.pdf")
+    avg_speed_pb = [avg_metric(ints_pb, e, "speed")*3.6 for e in edges]
+    avg_speed_pr = [avg_metric(ints_pr, e, "speed")*3.6 for e in edges]
+    xs = np.arange(len(edges))
+    ax.bar(xs-0.2, avg_speed_pb, 0.4, label="Peak Base", color="#c62828", alpha=0.85)
+    ax.bar(xs+0.2, avg_speed_pr, 0.4, label="Peak RM", color="#2e7d32", alpha=0.85)
+    ax.set_xticks(xs); ax.set_xticklabels(edges, fontsize=9)
+    ax.set_ylabel("Average speed (km/h)")
+    ax.set_title("Per-edge average speed — Peak Base vs Peak RM")
+    ax.axhline(90, ls=":", color="grey", lw=0.8); ax.text(0.1, 91, "free-flow 90 km/h", fontsize=8, color="grey")
+    ax.legend(); ax.grid(axis="y", alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f"{OUT}/fig_per_edge_speed.pdf")
+    plt.close()
+    print("✓ fig_per_edge_speed.pdf")
 
 print("\nAll figures generated.")

@@ -1,4 +1,7 @@
-# Optional — vision sample only
+# Report figures (python latex/make_figures.py): reads results/ and sumo/, writes latex/figs/
+matplotlib>=3.5
+numpy>=1.24
+
+# Optional - vision sample only (scripts/vision/yolo_line_count.py; needs your own video and weights)
 ultralytics>=8.0.0
 opencv-python>=4.8.0
-numpy>=1.24.0
