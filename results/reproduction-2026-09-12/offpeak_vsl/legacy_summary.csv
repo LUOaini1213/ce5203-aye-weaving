@@ -1,0 +1,2 @@
+period,scenario,departed,arrived,capacity_veh_h,throughput_veh_h,avg_delay_s_veh,peak_delay_s_veh,avg_queue_veh,peak_queue_veh,avg_time_in_queue_s_veh,avg_excess_acc_veh,peak_excess_acc_veh,net_total_timeloss_veh_s,avg_speed_weaving_kmh,avg_net_delay_s_veh
+offpeak,vsl,5496,5496,6393.1,4525.9,13.61,20.86,19.29,31.91,0.443,19.29,31.91,182911.5,45.85,33.28

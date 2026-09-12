@@ -1,0 +1,50 @@
+{
+  "kind": "September 2026 rerun using recovered course control rules; not the historical result table",
+  "archived_runner_sha256": "0b1ea5bf3609698c4c20063a3e61a2f05d8c3c4edf774164034292325cca8402",
+  "parameters": {
+    "end": 5400,
+    "step": 0.5,
+    "seed": 42,
+    "control_period": 30.0,
+    "vsl_threshold": 0.15,
+    "rm_threshold": 0.2,
+    "release_ratio": 0.7,
+    "free_speed": 25.0,
+    "vsl_speed": 12.0,
+    "time_to_teleport": 120.0,
+    "report_weaving_length": 373.01
+  },
+  "sumo_version": "SUMO 1.24.0",
+  "traci_api_version": 22,
+  "input_sha256": {
+    "sumo/offpeak/aye_bottleneck_net.xml": "b2a00b93dc0d794ef43186c3527050fc439e4307a27889780b9a2421d19089a2",
+    "sumo/offpeak/offpeak_demand_rou.xml": "81739168e8ab11ea6f1b58009b13c416339a6fadad71818b3a891d2dcebc85a8"
+  },
+  "network_weaving_lane_lengths_m": {
+    "E_weaving_0": 357.32,
+    "E_weaving_1": 357.32,
+    "E_weaving_2": 357.32,
+    "E_weaving_3": 357.32
+  },
+  "historical_csv_sha256": "0231591f522fdcabe7a4ae482ce35af6e4cb11bc3b1712b0946a3f1dc89273d5",
+  "artifact_sha256": {
+    "additional.add.xml": "741b8057eedf4fd930867fc66c67655c36b6094a07d55bf7b601ce35f2b54618",
+    "control_trace.csv": "545a62a0ce8ab3218190955fe83e065ef7a2516979306263b3e187f5bcb8b988",
+    "edge_data_output.xml.gz": "909ca130fab4deb337bbac5fce3b4004bf10bd2263218a4597ed1da4626a6e91",
+    "legacy_summary.csv": "4adf5a8ec353192beae91133a325c1ff8f562be94d58801f1c015267ab6a8954",
+    "main_in.xml.gz": "5dd3feb0a48e40a988356241562f33b30aa5d9dc1a19fbce337bd00dfa0f73b1",
+    "main_out.xml.gz": "5112737bbcc1ab2a02749718280ac3061ca72dfa9547dbaddab8177a161f5d98",
+    "metrics.json": "9ecd9a3a3a35c5524205596c9bd8eed491022a83efd854877ee002d8e2ed24c8",
+    "off_ramp_0.xml.gz": "149cf38d0927885681f68c565407343b87171761b0ee5cf08624c1a7812ba486",
+    "off_ramp_1.xml.gz": "958a6827cf0477cd678f4891b732ee5d41a2ab938ae3f58f6760ccc3533767e0",
+    "on_ramp.xml.gz": "2a1d59231d7602cf2d729918343951be370a2e5ef9b9eddca02ce9be50071a57",
+    "scenario.sumocfg": "c10a1cb7721a00492ec60a10d5165a29747699f344332e57d5c8214dfe59e619",
+    "stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sumo.log": "08aefc1aa4a4630f22be1cfff1a888d0c496eb471926fc0bad9368450e6de5ef",
+    "tripinfo.xml.gz": "e1a006b56643e355146cecc436dfa3ab43e2f6a0ac31791f816e6802a99b8962",
+    "warnings.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "weaving.xml.gz": "121f820a6aff60a770fc52e83627c0fcb74c77c09b348f60b0004826b3a2f00e"
+  },
+  "created_utc": "2026-09-12T05:40:52.125926+00:00",
+  "python": "3.11.5"
+}

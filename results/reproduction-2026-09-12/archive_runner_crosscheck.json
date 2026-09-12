@@ -1,0 +1,61 @@
+{
+  "date": "2026-09-12",
+  "purpose": "Independent check of the portable refactoring against the recovered archived runner; not validation of the historical course results.",
+  "archive_entry": "CE5203_Group12_Submission_FINAL.zip/code/run_scenario.py",
+  "archive_source_sha256": "0b1ea5bf3609698c4c20063a3e61a2f05d8c3c4edf774164034292325cca8402",
+  "only_source_edit": "Replace hardcoded SUMO_HOME with the local SUMO installation path.",
+  "environment_selection": "LIBSUMO=0 selects the archive code existing socket TraCI backend.",
+  "sumo_version": "1.24.0",
+  "checks": [
+    {
+      "period": "peak",
+      "scenario": "base",
+      "all_legacy_fields_match": true,
+      "legacy_summary": {
+        "period": "peak",
+        "scenario": "base",
+        "departed": "4493",
+        "arrived": "4493",
+        "capacity_veh_h": "6448.4",
+        "throughput_veh_h": "4639.0",
+        "avg_delay_s_veh": "21.2",
+        "peak_delay_s_veh": "76.25",
+        "avg_queue_veh": "28.63",
+        "peak_queue_veh": "59.17",
+        "avg_time_in_queue_s_veh": "1.782",
+        "avg_excess_acc_veh": "28.63",
+        "peak_excess_acc_veh": "59.17",
+        "net_total_timeloss_veh_s": "183708.2",
+        "avg_speed_weaving_kmh": "39.25",
+        "avg_net_delay_s_veh": "40.89"
+      },
+      "archive_output_sha256": "56004fa13aa05d3af190fe0f382fefbc5ce57b08bea37733a8d97aa9cd91f0a9",
+      "portable_output_sha256": "56004fa13aa05d3af190fe0f382fefbc5ce57b08bea37733a8d97aa9cd91f0a9"
+    },
+    {
+      "period": "peak",
+      "scenario": "rm",
+      "all_legacy_fields_match": true,
+      "legacy_summary": {
+        "period": "peak",
+        "scenario": "rm",
+        "departed": "4493",
+        "arrived": "4493",
+        "capacity_veh_h": "7073.4",
+        "throughput_veh_h": "4270.1",
+        "avg_delay_s_veh": "9.58",
+        "peak_delay_s_veh": "24.41",
+        "avg_queue_veh": "13.8",
+        "peak_queue_veh": "39.83",
+        "avg_time_in_queue_s_veh": "0.078",
+        "avg_excess_acc_veh": "13.8",
+        "peak_excess_acc_veh": "39.83",
+        "net_total_timeloss_veh_s": "82697.5",
+        "avg_speed_weaving_kmh": "54.15",
+        "avg_net_delay_s_veh": "18.41"
+      },
+      "archive_output_sha256": "6fd683f266047944eb46f26377476ede4c7fc42e35c4c7a9a27dfed45c00f266",
+      "portable_output_sha256": "6fd683f266047944eb46f26377476ede4c7fc42e35c4c7a9a27dfed45c00f266"
+    }
+  ]
+}

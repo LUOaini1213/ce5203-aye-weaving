@@ -1,0 +1,2 @@
+period,scenario,departed,arrived,capacity_veh_h,throughput_veh_h,avg_delay_s_veh,peak_delay_s_veh,avg_queue_veh,peak_queue_veh,avg_time_in_queue_s_veh,avg_excess_acc_veh,peak_excess_acc_veh,net_total_timeloss_veh_s,avg_speed_weaving_kmh,avg_net_delay_s_veh
+peak,rm,4493,4493,7073.4,4270.1,9.58,24.41,13.8,39.83,0.078,13.8,39.83,82697.5,54.15,18.41

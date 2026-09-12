@@ -1,0 +1,13 @@
+period,scenario,historical_time_loss_veh_s,rerun_time_loss_veh_s,change_pct
+peak,base,143396.6,183708.2,28.112
+peak,vsl,173427.1,192840.8,11.1942
+peak,vsl_up,142331.4,184815.0,29.8484
+peak,rm,110833.5,82697.5,-25.3858
+peak,vsl_rm,173335.5,189317.3,9.2202
+peak,vsl_up_rm,123997.1,102461.3,-17.368
+offpeak,base,89050.3,130361.1,46.3904
+offpeak,vsl,167590.0,182911.5,9.1423
+offpeak,vsl_up,99602.3,122339.8,22.8283
+offpeak,rm,86585.3,83313.7,-3.7785
+offpeak,vsl_rm,140242.1,121888.2,-13.0873
+offpeak,vsl_up_rm,107329.5,105287.6,-1.9025

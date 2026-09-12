@@ -1,0 +1,32 @@
+name: SUMO reproduction
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  control-and-simulation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install SUMO and matching TraCI tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y sumo sumo-tools
+      - name: Control regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Simulate all twelve combinations
+        env:
+          SUMO_HOME: /usr/share/sumo
+        run: |
+          python scripts/sumo/run_scenarios.py --all --end 120 --jobs 2 --sumo-binary /usr/bin/sumo --vsl-threshold 0.01 --rm-threshold 0.01 --output runs/ci-smoke --compress-xml
+          python scripts/sumo/check_run.py runs/ci-smoke
+      - name: Preserve smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: twelve-scenario-smoke
+          path: runs/ci-smoke

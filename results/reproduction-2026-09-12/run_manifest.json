@@ -1,0 +1,22 @@
+{
+  "status": "complete",
+  "scenario_count": 12,
+  "parameters": {
+    "end": 5400,
+    "step": 0.5,
+    "seed": 42,
+    "control_period": 30.0,
+    "vsl_threshold": 0.15,
+    "rm_threshold": 0.2,
+    "release_ratio": 0.7,
+    "free_speed": 25.0,
+    "vsl_speed": 12.0,
+    "time_to_teleport": 120.0,
+    "report_weaving_length": 373.01
+  },
+  "runner_sha256": "70910c77d9df5c6bc2f775e46d19c436748eb5219d0f739377fcf10e7eb09d61",
+  "control_sha256": "c87040fadbd0bad14dd42e272da62ef10c882e86580ce02d0a391f8c3718ca0f",
+  "metrics_sha256": "eb908396dfa49289c5f81b686fa06f296cb5deee1f79d3b988db3a63f751bd7b",
+  "completed": 12,
+  "all_demand_completed": true
+}

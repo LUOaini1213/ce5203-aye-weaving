@@ -29,3 +29,6 @@ venv/
 
 # Local packages
 *.zip
+
+# New local simulations; curated full-run evidence is under results/reproduction-*/
+/runs/

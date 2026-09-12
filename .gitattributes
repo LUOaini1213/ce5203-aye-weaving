@@ -1,2 +1,5 @@
 latex/** linguist-documentation
 docs/** linguist-documentation
+scripts/sumo/*.py text eol=lf
+# Evidence hashes describe exact bytes, including CSV line endings.
+results/reproduction-2026-09-12/** -text whitespace=cr-at-eol

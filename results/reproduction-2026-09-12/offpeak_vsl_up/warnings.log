@@ -1,0 +1,6 @@
+Warning: Vehicle 'veh_3011' performs emergency braking on lane 'E_weaving_2' with decel=7.00, wished=3.50, severity=1.00, time=2063.00.
+Warning: Vehicle 'veh_3156' performs emergency braking on lane 'E_main_in_2' with decel=9.00, wished=4.50, severity=1.00, time=2167.00.
+Warning: Vehicle 'veh_3651' performs emergency braking on lane 'E_weaving_0' with decel=9.00, wished=4.50, severity=1.00, time=2627.50.
+Warning: Vehicle 'veh_4004' performs emergency braking on lane 'E_weaving_3' with decel=9.00, wished=4.50, severity=1.00, time=2723.00.
+Warning: Vehicle 'veh_5044' performs emergency braking on lane 'E_weaving_0' with decel=9.00, wished=4.50, severity=1.00, time=3513.00.
+Warning: Vehicle 'veh_5341' performs emergency braking on lane 'E_main_in_1' with decel=9.00, wished=4.50, severity=1.00, time=3639.00.

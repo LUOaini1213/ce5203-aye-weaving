@@ -1,0 +1,21 @@
+***Starting server on port 63040 ***
+Loading net-file from '../../../sumo/peak/aye_bottleneck_net.xml' ... done (3ms).
+Loading additional-files from 'additional.add.xml' ... done (6ms).
+Loading route-files incrementally from '../../../sumo/peak/peak_demand_rou.xml'
+Loading done.
+Simulation version 1.24.0 started with time: 0.00.
+Warning: Vehicle 'veh_994' performs emergency braking on lane 'E_main_out_1' with decel=10.00, wished=5.00, severity=1.00, time=590.50.
+Warning: Vehicle 'veh_2052' performs emergency braking on lane 'E_weaving_0' with decel=9.00, wished=4.50, severity=1.00, time=1939.00.
+Warning: Vehicle 'veh_2071' performs emergency braking on lane 'E_weaving_3' with decel=10.00, wished=5.00, severity=1.00, time=1965.00.
+Simulation ended at time: 3803.00.
+Reason: TraCI requested termination.
+Performance:
+ Duration: 23.08s
+ TraCI-Duration: 6.39s
+ Real time factor: 164.768
+ UPS: 27141.111737
+Vehicles:
+ Inserted: 4493
+ Running: 0
+ Waiting: 0
+ Emergency Braking: 3
