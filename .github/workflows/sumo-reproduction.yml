@@ -28,6 +28,7 @@ jobs:
           for run in "${runs[@]}"; do
             echo "== $run"
             python scripts/sumo/check_run.py "$run" --require-complete
+            python scripts/sumo/compare_history.py "$run" --check
           done
       - name: Redraw every report figure
         run: |
