@@ -1,7 +1,8 @@
-# Report figures (python latex/make_figures.py): reads results/ and sumo/, writes latex/figs/
+# Report figures: python latex/make_figures.py
+# Reads results/ and sumo/, writes latex/figs/. CI installs exactly this file.
 matplotlib>=3.5
-numpy>=1.24
+numpy>=1.25  # matplotlib 3.11 refuses to import with numpy 1.24
 
-# Optional - vision sample only (scripts/vision/yolo_line_count.py; needs your own video and weights)
-ultralytics>=8.0.0
-opencv-python>=4.8.0
+# The SUMO runner, check_run.py, the counting core and the test suite need
+# nothing beyond the standard library (plus SUMO's own TraCI for simulation).
+# The vision runner's extra dependencies are in requirements-vision.txt.
