@@ -12,12 +12,34 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      # The next three steps run before SUMO is installed: they check code,
+      # committed evidence and documented numbers, and must not silently start
+      # depending on a simulator being present.
+      - name: Control and counting regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Verify the committed twelve-scenario evidence
+        run: |
+          shopt -s nullglob
+          runs=(results/reproduction-*/)
+          if [ ${#runs[@]} -eq 0 ]; then
+            echo "No committed rerun directory found under results/"
+            exit 1
+          fi
+          for run in "${runs[@]}"; do
+            echo "== $run"
+            python scripts/sumo/check_run.py "$run" --require-complete
+          done
+      - name: Redraw every report figure
+        run: |
+          pip install -r requirements.txt
+          CE5203_FIG_OUT="$RUNNER_TEMP/figs" python latex/make_figures.py
+          drawn=$(ls -1 "$RUNNER_TEMP/figs"/*.pdf | wc -l)
+          echo "figures drawn: $drawn"
+          test "$drawn" -eq 10
       - name: Install SUMO and matching TraCI tools
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y sumo sumo-tools
-      - name: Control regression tests
-        run: python -m unittest discover -s tests -v
       - name: Simulate all twelve combinations
         env:
           SUMO_HOME: /usr/share/sumo
