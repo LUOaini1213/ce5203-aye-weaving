@@ -39,6 +39,13 @@ def change_pct(rows, period, column):
     return (metered - base) / base * 100.0
 
 
+def as_written(field):
+    """Group thousands in a CSV field, leaving its decimals exactly as recorded."""
+    whole, _, frac = field.partition(".")
+    grouped = f"{int(whole):,}"
+    return f"{grouped}.{frac}" if frac else grouped
+
+
 def signed_pct(value, digits):
     sign = MINUS if value < 0 else "+"
     return f"{sign}{abs(value):.{digits}f}%"
@@ -76,10 +83,16 @@ class DocumentedNumberTests(unittest.TestCase):
         value = change_pct(self.rerun, "peak", "net_total_timeloss_veh_s")
         self.assertQuoted(f"total time loss {abs(value):.2f}%", "the front-matter headline")
 
-    def test_the_absolute_time_loss_pair_behind_the_historical_percentages(self):
+    def test_the_absolute_pairs_behind_both_peak_columns_are_quoted(self):
+        """A reader must be able to redo the division, not just read the percentage."""
         base = float(self.historical[("peak", "base")]["net_total_timeloss_veh_s"])
         metered = float(self.historical[("peak", "rm")]["net_total_timeloss_veh_s"])
         self.assertEqual((base, metered), (143396.6, 110833.5))
+        for label, rows in (("historical", self.historical), ("rerun", self.rerun)):
+            for column in ("net_total_timeloss_veh_s", "avg_delay_s_veh"):
+                pair = " → ".join(as_written(rows[("peak", scenario)][column])
+                                       for scenario in ("base", "rm"))
+                self.assertQuoted(pair, f"the {label} peak {column} pair")
 
     def test_departure_delay_counterweight_is_recomputed(self):
         for period, digits in (("peak", 1), ("offpeak", 1)):
@@ -129,6 +142,19 @@ class DocumentedNumberTests(unittest.TestCase):
         self.assertQuoted(f"{result['total_veh']:,} veh", "the counted vehicle total")
         self.assertQuoted(f"{result['survey_minutes']:g} min", "the survey duration")
         self.assertQuoted(f"{result['capacity_veh_h']:,.1f} veh/h", "the empirical capacity")
+        self.assertQuoted(f"{result['by_group']['main road']:,} mainline + "
+                          f"{result['by_group']['merge']:,} merge",
+                          "the mainline and merge subtotals")
+
+    def test_the_counts_are_attributed_to_the_code_that_produced_them(self):
+        """The tallies predate the point_on_segment fix; both files must say so."""
+        counts_readme = (ROOT / "data" / "counts" / "README.md").read_text(encoding="utf-8")
+        self.assertIn("point_on_segment", counts_readme,
+                      "data/counts/README.md no longer names the corrected predicate")
+        self.assertIn("been recounted", counts_readme,
+                      "data/counts/README.md no longer says the tallies were not recounted")
+        self.assertIn("point_on_segment", self.readme,
+                      "README.md no longer says which counting code produced the tallies")
 
     def test_data_macros_are_regenerated_from_the_historical_csv(self):
         self.assertEqual(TARGET.read_text(encoding="utf-8"), render(load_rows(HISTORICAL)),

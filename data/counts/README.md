@@ -47,3 +47,22 @@ Facts a reader of the sheet should have up front:
 
 `tests/test_documented_numbers.py` asserts that 3,627, 43 min and 5,060.9 veh/h
 still come out of the workbook and are still the numbers the README quotes.
+
+## Which version of the counting code produced these tables
+
+These tallies were produced by the line-counting pipeline as it stood **before**
+`point_on_segment` was corrected in `scripts/vision/line_counting.py`. The
+earlier predicate compared a boolean against `0`, so a point inside a line's
+bounding box on one side of that line was read as lying on it, and a frame that
+crossed nothing could be recorded as a crossing. Lines 1 and 2 are horizontal,
+their bounding boxes are degenerate and they are unaffected; lines 3-8 are the
+diagonal merge and exit movements, with 50x40 px boxes, and are the ones
+exposed. Because a track is counted at most once per line and once per group, a
+spurious hit can also take the place of the count the real crossing would have
+produced, so the effect is not purely additive.
+
+The workbooks have **not** been recounted: the source video and the per-frame
+logs are not in this repository, so there is nothing here to recount from. The
+counts above, and the ≈5,060 veh/h derived from them, are therefore the output
+of that earlier code. The corrected predicate is covered by
+`tests/test_line_counting.py` and applies to later runs.

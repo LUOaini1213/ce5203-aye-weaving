@@ -169,6 +169,10 @@ top of this page verifies.
 | Off-peak — network total time loss | −2.77% | −36.09% |
 | Off-peak — weaving average delay | −7.09% | −38.78% |
 
+Both peak columns are arithmetic on the CSVs, for `peak,base` against `peak,rm`:
+historically `net_total_timeloss_veh_s` 143,396.6 → 110,833.5 and `avg_delay_s_veh`
+11.89 → 10.97; in the rerun 183,708.2 → 82,697.5 and 21.2 → 9.58.
+
 In both tables, in-section VSL alone is worse than doing nothing, and combining
 it with ramp metering is worse than ramp metering alone.
 
@@ -183,7 +187,12 @@ The peak network also clears 300 s later (3,503 → 3,803 s) and the flow proxy
 two committed CSVs, and `tests/test_documented_numbers.py` recomputes them.
 
 Capacity (field): weaving section ≈ **5,060 veh/h** — 3,627 veh counted over
-43 min, re-derived from the workbook by `scripts/counts/capacity_from_counts.py`.
+43 min (2,348 mainline + 1,279 merge), re-derived from the workbook by
+`scripts/counts/capacity_from_counts.py`. Those tallies were produced by the
+counting code as it stood before the `point_on_segment` fix in this repository
+and have not been recounted, because the source video is not here;
+[data/counts/README.md](data/counts/README.md) sets out which of the eight
+counting lines that predicate affected.
 
 ---
 
