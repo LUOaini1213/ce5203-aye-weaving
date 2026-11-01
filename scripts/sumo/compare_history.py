@@ -44,7 +44,9 @@ def compare(output, quiet=False):
         writer = csv.DictWriter(handle, fieldnames=rows[0])
         writer.writeheader()
         writer.writerows(rows)
-    (output / "comparison.md").write_text("\n".join(lines), encoding="utf-8")
+    # The committed evidence keeps CRLF bytes (see .gitattributes); write them explicitly so the
+    # byte-for-byte check gives the same answer on Linux CI as on the Windows machine that ran SUMO.
+    (output / "comparison.md").write_text("\n".join(lines), encoding="utf-8", newline="\r\n")
     if not quiet:
         print(output / "comparison.md")
 
