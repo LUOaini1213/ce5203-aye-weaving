@@ -166,13 +166,51 @@ has been overwritten or relabelled as the new measurement.
 ## Regression and CI
 
 ```bash
+# 1. Unit tests: control rules, legacy metrics, counting-line geometry, and
+#    every number quoted in README.md plus latex/data_macros.tex.
 python -m unittest discover -s tests -v
+
+# 2. The committed evidence itself: recompute each artifact's SHA-256 and check
+#    summary.csv against the twelve metrics.json files. No SUMO needed.
+python scripts/sumo/check_run.py results/reproduction-2026-09-12 --require-complete
+# 2b. The documents derived from that summary, regenerated and diffed byte for byte.
+python scripts/sumo/compare_history.py results/reproduction-2026-09-12 --check
+
+# 3. Figures, from the committed data only.
+pip install -r requirements.txt && python latex/make_figures.py
+
+# 4. A fresh short run of all twelve scenarios (needs SUMO).
 python scripts/sumo/run_scenarios.py --all --end 120 --jobs 2 --vsl-threshold 0.01 --rm-threshold 0.01 --output runs/smoke --compress-xml
 python scripts/sumo/check_run.py runs/smoke
 ```
 
+CI runs those four groups in that order and uploads the smoke run's raw outputs
+and control traces. Groups 1-3 run before SUMO is installed, so they fail loudly
+if they ever start depending on a simulator being present.
+
 The smoke run deliberately lowers both thresholds so the short traffic sample
 activates every controller. **It is a software integration check, not a
 performance experiment**. The full committed run uses the original 0.15/0.20
-thresholds and completes all demand. CI runs the seven regression tests and
-all twelve smoke scenarios, then uploads their raw outputs and control traces.
+thresholds and completes all demand.
+
+What `check_run.py` covers, and what it does not:
+
+- it recomputes the SHA-256 of every file listed in a scenario's
+  `provenance.json` — raw XML, control trace, `metrics.json`,
+  `legacy_summary.csv`, logs — and compares against the recorded digest;
+- it requires real departures and arrivals, trip counts that agree with TraCI,
+  the expected VSL lane placement, an observed `metered` signal programme in
+  every RM scenario, and no control action at all in the base cases;
+- it recomputes the top-level `summary.csv` field by field from the twelve
+  `metrics.json` files, so the table a reader looks at cannot drift from the
+  runs it summarises;
+- `provenance.json` is not covered by a digest it stores itself, so an edit
+  applied consistently to both `metrics.json` and `provenance.json` would pass.
+
+`comparison.md` and `historical_comparison.csv` are derived from `summary.csv`,
+so `check_run.py` does not hash them. They are checked separately, in the same
+CI step, by `compare_history.py --check`: it regenerates both into a temporary
+directory and compares them byte for byte with the committed copies. That
+matters for `comparison.md` in particular, because README.md links a reader
+straight to it. `run_manifest.json` is not covered by either check; the runner
+writes it, and `check_run.py` reads only its `status` and `completed` fields.

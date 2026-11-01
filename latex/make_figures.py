@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Generate all figures for the LaTeX report."""
-import csv, os, sys
+import csv, glob, gzip, os, sys
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # the progress marks are non-ASCII
 import xml.etree.ElementTree as ET
@@ -29,6 +29,22 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.environ.get("CE5203_FIG_OUT", os.path.join(ROOT, "latex", "figs"))
 RESULTS_CSV = os.path.join(ROOT, "results", "sumo_12scenarios_results.csv")
 os.makedirs(OUT, exist_ok=True)
+
+# The empirical capacity line comes from the tally workbook, not from a literal.
+sys.path.insert(0, os.path.join(ROOT, "scripts", "counts"))
+from capacity_from_counts import analyse as capacity_from_workbook  # noqa: E402
+
+# Per-edge outputs for the controlled scenarios live in the committed rerun.
+# They were produced with the recovered 0.5 s scenario step, while
+# sumo/<period>/edge_data_output.xml is the standalone 0.1 s base configuration,
+# so the two are never combined inside one figure and the rerun figures are
+# written under their own names instead of replacing the report's series.
+_RERUN_DIRS = sorted(glob.glob(os.path.join(ROOT, "results", "reproduction-*")))
+RERUN_DIR = _RERUN_DIRS[-1] if _RERUN_DIRS else None
+RERUN_LABEL = os.path.basename(RERUN_DIR) if RERUN_DIR else ""
+
+CAPACITY_VEH_H = capacity_from_workbook(
+    os.path.join(ROOT, "data", "counts", "peak_merge.xlsx"))["capacity_veh_h"]
 
 # Load 12 scenarios results
 RESULTS = {}
@@ -266,35 +282,44 @@ print("✓ fig_improvement_heatmap.pdf")
 # -------------------------------------------------------------------
 # Figure 7 - Per-edge metrics from peak base SUMO output
 # -------------------------------------------------------------------
-def scen_path(period, scen):
-    """Where a scenario's SUMO edge-data output lives. The base cases are
-    committed under sumo/<period>/; the other scenario runs (rm, vsl, ...) were
-    produced by the group's scenario runner and are not in the repository, so
-    the figures that need them are skipped unless a sumo_runs/ folder is present."""
-    if scen == "base":
-        return os.path.join(ROOT, "sumo", period, "edge_data_output.xml")
-    cand = os.path.join(ROOT, "sumo_runs", f"{period}_{scen}", "edge_data_output.xml")
-    return cand if os.path.isfile(cand) else None
+def standalone_base_path(period):
+    """The 0.1 s standalone base configuration committed under sumo/<period>/."""
+    path = os.path.join(ROOT, "sumo", period, "edge_data_output.xml")
+    return path if os.path.isfile(path) else None
+
+
+def rerun_path(period, scen):
+    """A controlled scenario's per-edge output inside the committed rerun."""
+    if RERUN_DIR is None:
+        return None
+    for name in ("edge_data_output.xml", "edge_data_output.xml.gz"):
+        candidate = os.path.join(RERUN_DIR, f"{period}_{scen}", name)
+        if os.path.isfile(candidate):
+            return candidate
+    return None
 
 
 def parse_edgedata(xml_path):
     if xml_path is None or not os.path.isfile(xml_path):
         return None
-    tree = ET.parse(xml_path)
+    opener = gzip.open if xml_path.endswith(".gz") else open
+    with opener(xml_path, "rb") as handle:
+        root = ET.parse(handle).getroot()
     intervals = []
-    for itv in tree.getroot().findall("interval"):
+    for itv in root.findall("interval"):
         rec = {"begin": float(itv.attrib["begin"]), "edges": {}}
         for ed in itv.findall("edge"):
             rec["edges"][ed.attrib["id"]] = {k: float(v) for k,v in ed.attrib.items() if k != "id"}
         intervals.append(rec)
     return intervals
 
-ints_pb = parse_edgedata(scen_path("peak", "base"))
-ints_pr = parse_edgedata(scen_path("peak", "rm"))
-ints_pv = parse_edgedata(scen_path("peak", "vsl"))
+ints_pb = parse_edgedata(standalone_base_path("peak"))
+rerun_pb = parse_edgedata(rerun_path("peak", "base"))
+rerun_pr = parse_edgedata(rerun_path("peak", "rm"))
+rerun_pv = parse_edgedata(rerun_path("peak", "vsl"))
 
-if ints_pr is None or ints_pv is None:
-    print("skip fig_timeseries.pdf: peak rm / vsl scenario outputs are not in the repository")
+if rerun_pb is None or rerun_pr is None or rerun_pv is None:
+    print("skip fig_timeseries_rerun.pdf: no committed rerun with peak base/rm/vsl edge data")
 else:
     def series(ints, edge, key, default=0):
         xs, ys = [], []
@@ -310,22 +335,23 @@ else:
 
     # (a) Speed on E_weaving across scenarios
     ax = axes[0]
-    for label, ints, color in [("Base", ints_pb, "#37474f"),
-                                 ("RM", ints_pr, "#2e7d32"),
-                                 ("VSL (in-section)", ints_pv, "#c62828")]:
+    for label, ints, color in [("Base", rerun_pb, "#37474f"),
+                                 ("RM", rerun_pr, "#2e7d32"),
+                                 ("VSL (in-section)", rerun_pv, "#c62828")]:
         xs, ys = series(ints, "E_weaving", "speed")
         ax.plot(xs, [y*3.6 for y in ys], lw=1.4, label=label, color=color)
     ax.axhline(90, ls=":", color="grey", lw=0.8); ax.text(2, 92, "free-flow 90 km/h", fontsize=8, color="grey")
     ax.set_ylabel("Weaving speed (km/h)")
-    ax.set_title("(a) E$_{weaving}$ speed time series — Peak demand, three scenarios")
+    ax.set_title(f"(a) E$_{{weaving}}$ speed time series — Peak demand, three scenarios"
+                 f"\n[{RERUN_LABEL}, recovered 0.5 s runner — not the historical report run]")
     ax.legend(loc="lower right")
     ax.grid(alpha=0.3); ax.set_ylim(20, 100)
 
     # (b) Density on E_weaving
     ax = axes[1]
-    for label, ints, color in [("Base", ints_pb, "#37474f"),
-                                 ("RM", ints_pr, "#2e7d32"),
-                                 ("VSL (in-section)", ints_pv, "#c62828")]:
+    for label, ints, color in [("Base", rerun_pb, "#37474f"),
+                                 ("RM", rerun_pr, "#2e7d32"),
+                                 ("VSL (in-section)", rerun_pv, "#c62828")]:
         xs, ys = series(ints, "E_weaving", "density")
         ax.plot(xs, ys, lw=1.4, label=label, color=color)
     ax.set_xlabel("Simulation time (minutes)")
@@ -334,9 +360,9 @@ else:
     ax.legend(loc="upper right")
     ax.grid(alpha=0.3)
     plt.tight_layout()
-    plt.savefig(f"{OUT}/fig_timeseries.pdf")
+    plt.savefig(f"{OUT}/fig_timeseries_rerun.pdf")
     plt.close()
-    print("✓ fig_timeseries.pdf")
+    print("✓ fig_timeseries_rerun.pdf")
 
 # -------------------------------------------------------------------
 # Figure 8 - Fundamental diagram (density-flow scatter from edge data)
@@ -345,7 +371,7 @@ fig, axes = plt.subplots(1, 2, figsize=(11, 4))
 
 for ax, ints, title, color in [
     (axes[0], ints_pb, "Peak Base", "#c62828"),
-    (axes[1], parse_edgedata(scen_path("offpeak", "base")), "Off-Peak Base", "#1565c0")
+    (axes[1], parse_edgedata(standalone_base_path("offpeak")), "Off-Peak Base", "#1565c0")
 ]:
     xs, ys = [], []
     cs = []
@@ -363,9 +389,9 @@ for ax, ints, title, color in [
     ax.set_ylabel("Flow (veh/h)")
     ax.set_title(f"Fundamental diagram — {title}")
     ax.grid(alpha=0.3)
-    # Capacity line
-    cap = 5060
-    ax.axhline(cap, ls="--", color="black", alpha=0.4); ax.text(2, cap+50, f"empirical cap. {cap}", fontsize=8)
+    # Capacity line, re-derived from the field tally workbook on every run
+    ax.axhline(CAPACITY_VEH_H, ls="--", color="black", alpha=0.4)
+    ax.text(2, CAPACITY_VEH_H + 50, f"empirical cap. {CAPACITY_VEH_H:,.1f} veh/h", fontsize=8)
     # Legend
     handles = [Line2D([],[], marker="o", color="#1565c0", lw=0, ms=6, label="E_main_in"),
                Line2D([],[], marker="o", color="#c62828", lw=0, ms=6, label="E_weaving"),
@@ -410,8 +436,8 @@ print("✓ fig_vsl_placement.pdf")
 # -------------------------------------------------------------------
 # Figure 10 - Per-edge breakdown for peak base & peak RM
 # -------------------------------------------------------------------
-if ints_pr is None:
-    print("skip fig_per_edge_speed.pdf: peak rm scenario output is not in the repository")
+if rerun_pb is None or rerun_pr is None:
+    print("skip fig_per_edge_speed_rerun.pdf: no committed rerun with peak base/rm edge data")
 else:
     fig, ax = plt.subplots(figsize=(8.5, 4))
     edges = ["E_main_in","E_weaving","E_main_out","E_off_ramp","E_on_ramp_2"]
@@ -420,19 +446,20 @@ else:
         vs = [r["edges"][edge].get(key,0) for r in ints if edge in r["edges"]]
         return sum(vs)/len(vs) if vs else 0
 
-    avg_speed_pb = [avg_metric(ints_pb, e, "speed")*3.6 for e in edges]
-    avg_speed_pr = [avg_metric(ints_pr, e, "speed")*3.6 for e in edges]
+    avg_speed_pb = [avg_metric(rerun_pb, e, "speed")*3.6 for e in edges]
+    avg_speed_pr = [avg_metric(rerun_pr, e, "speed")*3.6 for e in edges]
     xs = np.arange(len(edges))
     ax.bar(xs-0.2, avg_speed_pb, 0.4, label="Peak Base", color="#c62828", alpha=0.85)
     ax.bar(xs+0.2, avg_speed_pr, 0.4, label="Peak RM", color="#2e7d32", alpha=0.85)
     ax.set_xticks(xs); ax.set_xticklabels(edges, fontsize=9)
     ax.set_ylabel("Average speed (km/h)")
-    ax.set_title("Per-edge average speed — Peak Base vs Peak RM")
+    ax.set_title(f"Per-edge average speed — Peak Base vs Peak RM"
+                 f"\n[{RERUN_LABEL}, recovered 0.5 s runner — not the historical report run]")
     ax.axhline(90, ls=":", color="grey", lw=0.8); ax.text(0.1, 91, "free-flow 90 km/h", fontsize=8, color="grey")
     ax.legend(); ax.grid(axis="y", alpha=0.3)
     plt.tight_layout()
-    plt.savefig(f"{OUT}/fig_per_edge_speed.pdf")
+    plt.savefig(f"{OUT}/fig_per_edge_speed_rerun.pdf")
     plt.close()
-    print("✓ fig_per_edge_speed.pdf")
+    print("✓ fig_per_edge_speed_rerun.pdf")
 
 print("\nAll figures generated.")

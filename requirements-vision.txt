@@ -1,0 +1,5 @@
+# scripts/vision/yolo_line_count.py only; needs your own video and weights.
+# scripts/vision/line_counting.py and tests/test_line_counting.py do not.
+ultralytics>=8.0.0
+opencv-python>=4.8.0
+numpy>=1.25

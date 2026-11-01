@@ -1,271 +1,238 @@
-import cv2
-import numpy as np
-from ultralytics import YOLO
-import time
+#!/usr/bin/env python3
+"""Multi-line vehicle counting over a traffic video (YOLO detection + tracking).
+
+The counting decision itself -- segment intersection, direction, per-line and
+per-group de-duplication -- lives in `line_counting.py`, which has no
+third-party dependencies and is covered by `tests/test_line_counting.py`.
+This file is the I/O shell around it: decode frames, run the detector/tracker,
+feed centroids to the counter, log tallies.
+
+Example:
+
+    python scripts/vision/yolo_line_count.py
+        --video peak_1735.mp4 --model yolo11s_openvino_model/
+        --device cpu --csv peak_counts.csv
+
+`--device` is passed straight to Ultralytics: `cpu`, `cuda:0`, `0`, or
+`intel:gpu` for an OpenVINO export on an Intel GPU. It defaults to `cpu` so
+the script starts on any machine. `--show` opens a preview window and is off
+by default, so the script also runs on a headless box.
+
+Neither the field videos nor the model weights are in this repository; point
+`--video` and `--model` at your own files.
+"""
+from __future__ import annotations
+
+import argparse
 import csv
 import os
+import sys
+import time
 from datetime import datetime
-import os
+from pathlib import Path
 
-VIDEO_PATH = "202603291735.mp4"
-#VIDEO_PATH = "202603211716.mp4"
-MODEL_PATH = "yolo11s_openvino_model/"
-VEHICLE_CLASSES = [2, 3, 5, 7]
-CLASS_NAMES = {2: "car", 3: "motorcycle", 5: "bus", 7: "truck"}
-CONF_THRESHOLD = 0.1
-TRACKER_CONFIG = "bytetrack.yaml"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from line_counting import (  # noqa: E402
+    AYE_WB_LINES,
+    AYE_WB_LINE_GROUPS,
+    LineCounter,
+    VEHICLE_CLASS_IDS,
+    VEHICLE_CLASS_NAMES,
+)
 
-LINES = [
-    {"p1": (0, 425), "p2": (708, 425), "direction": "down"},
-    {"p1": (708, 425), "p2": (1100, 425), "direction": "down"},
-    {"p1": (728, 138), "p2": (678, 178), "direction": "left"},
-    {"p1": (678, 178), "p2": (665, 285), "direction": "left"},
-    {"p1": (665, 285), "p2": (708, 425), "direction": "left"},
-    {"p1": (728, 138), "p2": (678, 178), "direction": "right"},
-    {"p1": (678, 178), "p2": (665, 285), "direction": "right"},
-    {"p1": (665, 285), "p2": (708, 425), "direction": "right"},
-]
-
-LINE_GROUPS = [(2, 5, 3, 6, 4, 7)]
-
-DISPLAY_WIDTH = 1280
-
-model = YOLO(MODEL_PATH)
-cap = cv2.VideoCapture(VIDEO_PATH)
-if not cap.isOpened():
-    print("Cannot open video file")
-    exit()
-
-fps = cap.get(cv2.CAP_PROP_FPS)
-if fps <= 0:
-    fps = 30   
-total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-total_duration = total_frames / fps if fps > 0 else 0
-print(f" {fps:.2f} fps, total frames: {total_frames}, total time: {total_duration:.2f}s")
-
-orig_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-orig_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-display_height = int(DISPLAY_WIDTH * orig_height / orig_width)
-display_size = (DISPLAY_WIDTH, display_height)
-
-prev_positions = {}
-line_counts = []
-for _ in LINES:
-    line_counts.append({name: 0 for name in CLASS_NAMES.values()})
-
-line_counted_ids = [set() for _ in LINES]
-
-line_to_groups = [[] for _ in range(len(LINES))]
-for g_idx, group in enumerate(LINE_GROUPS):
-    for line_idx in group:
-        line_to_groups[line_idx].append(g_idx)
-
-group_counted_ids = [set() for _ in LINE_GROUPS]
+CLASS_ORDER = ("car", "motorcycle", "bus", "truck")
 
 
-frame_count = 0
-start_time = time.time()
-last_csv_video_time = 0.0          
-last_1p_frame = 0
-progress_interval = max(1, total_frames // 100)  
+def build_arg_parser():
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--video", required=True, type=Path,
+                        help="input video file")
+    parser.add_argument("--model", required=True,
+                        help="YOLO weights (.pt) or an exported model directory")
+    parser.add_argument("--device", default="cpu",
+                        help="Ultralytics device string, e.g. cpu, cuda:0, intel:gpu "
+                             "(default: cpu)")
+    parser.add_argument("--tracker", default="bytetrack.yaml",
+                        help="Ultralytics tracker config (default: bytetrack.yaml)")
+    parser.add_argument("--conf", type=float, default=0.1,
+                        help="detection confidence threshold (default: 0.1)")
+    parser.add_argument("--csv", type=Path, default=Path("traffic_counts_log.csv"),
+                        help="tally log to append to (default: traffic_counts_log.csv)")
+    parser.add_argument("--csv-interval", type=float, default=60.0,
+                        help="video seconds between log rows (default: 60)")
+    parser.add_argument("--screenshot-dir", type=Path, default=None,
+                        help="if set, save one annotated frame per log row here")
+    parser.add_argument("--max-frames", type=int, default=0,
+                        help="stop after this many frames (0 = whole video)")
+    parser.add_argument("--show", action="store_true",
+                        help="open a preview window (off by default; needs a display)")
+    parser.add_argument("--display-width", type=int, default=1280,
+                        help="preview window width in pixels (default: 1280)")
+    return parser
 
 
-last_print_200_time = start_time   
+def csv_header(lines):
+    header = ["timestamp", "video_time_sec"]
+    for index, line in enumerate(lines):
+        for name in CLASS_ORDER:
+            header.append(f"line_{index + 1}_{line.direction}_{name}")
+    return header
 
 
-csv_filename = "traffic_counts_log.csv"
-
-csv_header = ["timestamp", "video_time_sec"]
-
-for i in range(len(LINES)):
-    csv_header.append(f"line_{i+1}_{LINES[i]['direction']}_car")
-    csv_header.append(f"line_{i+1}_{LINES[i]['direction']}_motorcycle")
-    csv_header.append(f"line_{i+1}_{LINES[i]['direction']}_bus")
-    csv_header.append(f"line_{i+1}_{LINES[i]['direction']}_truck")
-
-def write_csv(data_dict):
-    
-    file_exists = os.path.isfile(csv_filename)
-    with open(csv_filename, mode='a', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=csv_header)
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow(data_dict)
-
-def get_current_counts_dict(video_time):
-    
-    data = {
+def counts_row(counter, video_time):
+    row = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "video_time_sec": round(video_time, 2)
+        "video_time_sec": round(video_time, 2),
     }
-    for i, counts in enumerate(line_counts):
-        for name in ["car", "motorcycle", "bus", "truck"]:
-            key = f"line_{i+1}_{LINES[i]['direction']}_{name}"
-            data[key] = counts.get(name, 0)
-    return data
-
-last_progress_time = start_time
-last_progress_frame = 0
-
-os.makedirs("screenshots", exist_ok=True)
-last_screenshot_video_time = 0.0
-
-show_window = True
-print("Press 'd' to show/hide video, press 'q' to quit")
+    for index, line in enumerate(counter.lines):
+        for name in CLASS_ORDER:
+            row[f"line_{index + 1}_{line.direction}_{name}"] = counter.counts[index].get(name, 0)
+    return row
 
 
-def ccw(A, B, C):
-    return (C[1] - A[1]) * (B[0] - A[0]) > (B[1] - A[1]) * (C[0] - A[0])
+def append_row(path, header, row):
+    exists = path.is_file()
+    if str(path.parent) and not path.parent.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=header)
+        if not exists:
+            writer.writeheader()
+        writer.writerow(row)
 
-def segments_intersect(A, B, C, D):
-    return (ccw(A, C, D) != ccw(B, C, D)) and (ccw(A, B, C) != ccw(A, B, D))
 
-def point_on_segment(P, A, B):
-    if min(A[0], B[0]) <= P[0] <= max(A[0], B[0]) and min(A[1], B[1]) <= P[1] <= max(A[1], B[1]):
-        return ccw(A, B, P) == 0
-    return False
-
-def direction_matches(prev, curr, direction):
-    dx = curr[0] - prev[0]
-    dy = curr[1] - prev[1]
-    if direction == "right":
-        return dx > 0
-    elif direction == "left":
-        return dx < 0
-    elif direction == "down":
-        return dy > 0
-    elif direction == "up":
-        return dy < 0
-    return False
-
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
-    frame_count += 1
-    video_time = frame_count / fps
-
-    key = cv2.waitKey(1) & 0xFF
-    if key == ord('q'):
-        break
-    elif key == ord('d'):
-        show_window = not show_window
-        print(f"Video is {'shown' if show_window else 'hidden'}")
-
-    results = model.track(
-        frame,
-        device="intel:gpu",
-        persist=True,
-        tracker=TRACKER_CONFIG,
-        classes=VEHICLE_CLASSES,
-        conf=CONF_THRESHOLD,
-        verbose=False
-    )
-
-    if results[0].boxes is not None and results[0].boxes.id is not None:
-        boxes = results[0].boxes.xyxy.cpu().numpy().astype(int)
-        track_ids = results[0].boxes.id.cpu().numpy().astype(int)
-        cls_ids = results[0].boxes.cls.cpu().numpy().astype(int)
-
-        for box, track_id, cls_id in zip(boxes, track_ids, cls_ids):
-            x1, y1, x2, y2 = box
-            cx = (x1 + x2) // 2
-            cy = y2
-
-            if track_id in prev_positions:
-                prev_cx, prev_cy = prev_positions[track_id]
-
-                for idx, line in enumerate(LINES):
-                    p1, p2 = line["p1"], line["p2"]
-                    is_crossing = segments_intersect((prev_cx, prev_cy), (cx, cy), p1, p2)
-                    if not is_crossing:
-                        if point_on_segment((prev_cx, prev_cy), p1, p2) or point_on_segment((cx, cy), p1, p2):
-                            is_crossing = True
-
-                    if is_crossing and direction_matches((prev_cx, prev_cy), (cx, cy), line["direction"]):
-                        if track_id in line_counted_ids[idx]:
-                            continue
-
-                        skip = False
-                        for g_idx in line_to_groups[idx]:
-                            if track_id in group_counted_ids[g_idx]:
-                                skip = True
-                                break
-                        if skip:
-                            continue
-
-                        line_counted_ids[idx].add(track_id)
-                        for g_idx in line_to_groups[idx]:
-                            group_counted_ids[g_idx].add(track_id)
-                        class_name = CLASS_NAMES.get(cls_id, "unknown")
-                        if class_name in line_counts[idx]:
-                            line_counts[idx][class_name] += 1
-
-            prev_positions[track_id] = (cx, cy)
-
-            cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
-
-    for idx, line in enumerate(LINES):
-        p1, p2 = line["p1"], line["p2"]
-        cv2.line(frame, p1, p2, (0, 255, 255), 2)
-        mid_x, mid_y = (p1[0] + p2[0]) // 2, (p1[1] + p2[1]) // 2
-        counts = line_counts[idx]
-        counts_text = f"{line['direction']}: " + " ".join([f"{k[:1]}:{v}" for k, v in counts.items()])
-        cv2.putText(frame, counts_text, (mid_x + 10, mid_y - 10),
+def annotate(cv2, frame, counter):
+    for index, line in enumerate(counter.lines):
+        cv2.line(frame, line.p1, line.p2, (0, 255, 255), 2)
+        mid = ((line.p1[0] + line.p2[0]) // 2, (line.p1[1] + line.p2[1]) // 2)
+        text = f"{line.direction}: " + " ".join(
+            f"{name[:1]}:{value}" for name, value in counter.counts[index].items())
+        cv2.putText(frame, text, (mid[0] + 10, mid[1] - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 1)
 
-    elapsed_real = time.time() - start_time
 
-    if frame_count % 200 == 0:
-        if frame_count > 0:
-            inst_fps = 200 / (time.time() - last_print_200_time)
-            print(f"[Instantaneous FPS] Frame {frame_count}: {inst_fps:.2f} FPS")
-            last_print_200_time = time.time()
+def run(args):
+    import cv2  # imported here so `import yolo_line_count` needs no OpenCV
+    from ultralytics import YOLO
 
-    if frame_count >= last_1p_frame + progress_interval:
-        now = time.time()
-        delta_frames = frame_count - last_progress_frame
-        delta_time = now - last_progress_time
-        inst_progress_fps = delta_frames / delta_time if delta_time > 0 else 0
-        percent = (frame_count / total_frames) * 100
-        print(f"[Progress] {percent:.1f}% ({frame_count}/{total_frames}) | Instantaneous FPS: {inst_progress_fps:.2f}")
-        last_1p_frame = frame_count
-        last_progress_time = now
-        last_progress_frame = frame_count
+    if not args.video.is_file():
+        raise SystemExit(f"Video not found: {args.video}")
+    if not os.path.exists(args.model):
+        raise SystemExit(f"Model not found: {args.model}")
+
+    counter = LineCounter(list(AYE_WB_LINES), groups=AYE_WB_LINE_GROUPS,
+                          classes=CLASS_ORDER)
+    header = csv_header(counter.lines)
+
+    model = YOLO(args.model)
+    capture = cv2.VideoCapture(str(args.video))
+    if not capture.isOpened():
+        raise SystemExit(f"Cannot open video file: {args.video}")
+
+    fps = capture.get(cv2.CAP_PROP_FPS) or 0
+    if fps <= 0:
+        fps = 30.0
+        print("Frame rate unavailable from the container; assuming 30 fps")
+    total_frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+    print(f"{fps:.2f} fps, {total_frames} frames, {total_frames / fps:.2f} s of video")
+
+    width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)) or args.display_width
+    height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)) or args.display_width
+    display_size = (args.display_width, int(args.display_width * height / width))
+
+    if args.screenshot_dir is not None:
+        args.screenshot_dir.mkdir(parents=True, exist_ok=True)
+    if args.show:
+        print("Preview window open: press 'q' to stop")
+
+    frame_count = 0
+    last_logged = 0.0
+    started = time.time()
+    video_time = 0.0
+    progress_step = max(1, total_frames // 100) if total_frames > 0 else 500
+    next_progress = progress_step
+
+    try:
+        while True:
+            ok, frame = capture.read()
+            if not ok:
+                break
+            frame_count += 1
+            video_time = frame_count / fps
+
+            results = model.track(
+                frame,
+                device=args.device,
+                persist=True,
+                tracker=args.tracker,
+                classes=list(VEHICLE_CLASS_IDS),
+                conf=args.conf,
+                verbose=False,
+            )
+
+            boxes = results[0].boxes
+            if boxes is not None and boxes.id is not None:
+                xyxy = boxes.xyxy.cpu().numpy().astype(int)
+                track_ids = boxes.id.cpu().numpy().astype(int)
+                class_ids = boxes.cls.cpu().numpy().astype(int)
+                for box, track_id, class_id in zip(xyxy, track_ids, class_ids):
+                    x1, y1, x2, y2 = box
+                    centroid = ((int(x1) + int(x2)) // 2, int(y2))
+                    counter.update(int(track_id),
+                                   VEHICLE_CLASS_NAMES.get(int(class_id), "unknown"),
+                                   centroid)
+                    cv2.circle(frame, centroid, 4, (0, 0, 255), -1)
+
+            annotate(cv2, frame, counter)
+
+            if total_frames > 0 and frame_count >= next_progress:
+                elapsed = time.time() - started
+                print(f"[Progress] {frame_count / total_frames * 100:.1f}% "
+                      f"({frame_count}/{total_frames}) | "
+                      f"{frame_count / max(elapsed, 1e-9):.2f} fps")
+                next_progress += progress_step
+
+            if video_time - last_logged >= args.csv_interval:
+                append_row(args.csv, header, counts_row(counter, video_time))
+                print(f"[CSV] video time {video_time:.1f}s written to {args.csv}")
+                last_logged = video_time
+                if args.screenshot_dir is not None:
+                    shot = args.screenshot_dir / f"screenshot_{video_time:.1f}s.jpg"
+                    cv2.imwrite(str(shot), frame)
+                    print(f"[Screenshot] {shot}")
+
+            if args.show:
+                cv2.imshow("Traffic Counting", cv2.resize(frame, display_size))
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
+
+            if args.max_frames and frame_count >= args.max_frames:
+                break
+    finally:
+        capture.release()
+        if args.show:
+            cv2.destroyAllWindows()
+
+    append_row(args.csv, header, counts_row(counter, video_time))
+    print(f"[CSV] final tallies written to {args.csv}")
+
+    print("\n===== Final statistics =====")
+    for index, line in enumerate(counter.lines):
+        print(f"line {index + 1} ({line.p1}-{line.p2}, direction: {line.direction}):")
+        for name in CLASS_ORDER:
+            print(f"  {name}: {counter.counts[index].get(name, 0)}")
+        print(f"  total: {counter.line_total(index)} veh")
+
+    elapsed = time.time() - started
+    print(f"\nFinished: {frame_count} frames in {elapsed:.2f}s "
+          f"({frame_count / max(elapsed, 1e-9):.2f} fps average)")
+    return 0
 
 
-    if video_time - last_csv_video_time >= 60:
-        data = get_current_counts_dict(video_time)
-        write_csv(data)
-        print(f"[CSV] Video time {video_time:.1f}s saved")
-        last_csv_video_time = video_time
-        screenshot_filename = f"screenshots/screenshot_{video_time:.1f}s.jpg"
-        cv2.imwrite(screenshot_filename, frame)
-        print(f"[Screenshot] Saved {screenshot_filename} (video time {video_time:.1f} s)")
-        last_screenshot_video_time = video_time
+def main(argv=None):
+    return run(build_arg_parser().parse_args(argv))
 
-    if show_window:
-        display_frame = cv2.resize(frame, display_size)
-        cv2.imshow("Traffic Counting", display_frame)
-    else:
-        pass
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
 
-cap.release()
-cv2.destroyAllWindows()
-
-final_data = get_current_counts_dict(video_time)
-write_csv(final_data)
-print(f"[CSV] Final result saved in {csv_filename}")
-
-print("\n===== Final statistics =====")
-for idx, counts in enumerate(line_counts):
-    print(f"line {idx+1} ({LINES[idx]['p1']}-{LINES[idx]['p2']}, direction:{LINES[idx]['direction']}):")
-    for name, cnt in counts.items():
-        print(f"  {name}: {cnt}")
-    total = sum(counts.values())
-    print(f"  total: {total} veh")
-
-total_time = time.time() - start_time
-print(f"\nFinished! Total time spent: {total_time:.2f}s, average FPS: {frame_count/total_time:.2f}")
+if __name__ == "__main__":
+    raise SystemExit(main())
