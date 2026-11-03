@@ -26,7 +26,8 @@ the survey duration out of the workbook's own `* 60 / 43` rate formula:
 ```text
 total               3627 veh   (workbook stores 3627)
 survey duration     43 min (from the workbook formula)
-capacity            5060.9302 veh/h
+capacity            5060.9302 veh/h   (total / 43 min, as the workbook does)
+mean over data rows 5181.4286 veh/h   (total / 42 rows that hold data)
 ```
 
 Facts a reader of the sheet should have up front:
@@ -38,7 +39,11 @@ Facts a reader of the sheet should have up front:
 - Row 1 also carries `This statistics is less accurate than statistics at exit`,
   which is about this merge sheet relative to the exit sheet.
 - 42 one-minute rows hold data; rows for 720 s, 780 s and 840 s are empty. The
-  sheet normalises the total by 43 minutes.
+  sheet normalises the total by 43 minutes, which gives 5,060.9 veh/h; over the
+  42 rows that hold data the same total gives 5,181.4 veh/h. The script prints
+  both. Either way the figure is the mean flow over the survey, not a flow
+  measured while the section was discharging a queue, so "capacity" here means
+  the course's capacity estimate rather than a measured capacity.
 - Six cells in the columns that feed the total are negative — `D9`, `D22`, `I8`,
   `I32`, `J8`, `J20`, net −10 veh over the 42 rows. They are left exactly as
   recorded, and the script prints them so the effect is visible rather than
