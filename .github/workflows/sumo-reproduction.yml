@@ -4,18 +4,31 @@ on:
   pull_request:
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash
 jobs:
-  control-and-simulation:
-    runs-on: ubuntu-latest
+  evidence:
+    # Code, committed evidence, documented numbers and figures. No simulator is
+    # installed in this job, so none of these steps can silently start depending
+    # on one. Runs on Windows too, because the README commands are meant to work there.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      # The next three steps run before SUMO is installed: they check code,
-      # committed evidence and documented numbers, and must not silently start
-      # depending on a simulator being present.
-      - name: Control and counting regression tests
+      - name: No local machine paths in tracked text files
+        run: |
+          if git grep -n -I -E '[A-Za-z]:[\\/]+Users[\\/]|/home/[a-z]|/Users/[A-Za-z]|Desktop[\\/]' -- . ; then
+            echo "A local machine path is committed (lines above); make it relative or remove it."
+            exit 1
+          fi
+      - name: Control, counting, rerun-check and documented-number tests
         run: python -m unittest discover -s tests -v
       - name: Verify the committed twelve-scenario evidence
         run: |
@@ -37,19 +50,41 @@ jobs:
           drawn=$(ls -1 "$RUNNER_TEMP/figs"/*.pdf | wc -l)
           echo "figures drawn: $drawn"
           test "$drawn" -eq 10
-      - name: Install SUMO and matching TraCI tools
+
+  simulation:
+    needs: evidence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install SUMO 1.24.0 (the version of the committed run) and matching TraCI
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y sumo sumo-tools
-      - name: Simulate all twelve combinations
-        env:
-          SUMO_HOME: /usr/share/sumo
+          pip install eclipse-sumo==1.24.0 traci==1.24.0
+          echo "SUMO_HOME=$(python -c 'import sumo; print(sumo.SUMO_HOME)')" >> "$GITHUB_ENV"
+      - name: Report the simulator version
+        run: '"$SUMO_HOME/bin/sumo" --version | head -1'
+      - name: Integration smoke test, all twelve combinations (120 s, lowered thresholds)
         run: |
-          python scripts/sumo/run_scenarios.py --all --end 120 --jobs 2 --sumo-binary /usr/bin/sumo --vsl-threshold 0.01 --rm-threshold 0.01 --output runs/ci-smoke --compress-xml
+          python scripts/sumo/run_scenarios.py --all --end 120 --jobs 2 --vsl-threshold 0.01 --rm-threshold 0.01 --output runs/ci-smoke --compress-xml
           python scripts/sumo/check_run.py runs/ci-smoke
-      - name: Preserve smoke evidence
+      - name: Full-horizon rerun of peak base, rm and vsl_up at the original thresholds
+        run: |
+          for s in base rm vsl_up; do
+            python scripts/sumo/run_scenarios.py --period peak --scenario "$s" --output "runs/full-$s" --compress-xml > "runs-full-$s.log" 2>&1 &
+          done
+          status=0
+          for job in $(jobs -p); do wait "$job" || status=1; done
+          for s in base rm vsl_up; do tail -2 "runs-full-$s.log"; done
+          exit $status
+      - name: Compare the reruns with the committed run, and check the stated signs
+        run: python scripts/sumo/check_rerun.py runs/full-base runs/full-rm runs/full-vsl_up
+      - name: Preserve simulation evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: twelve-scenario-smoke
-          path: runs/ci-smoke
+          name: sumo-ci-runs
+          path: |
+            runs/
+            runs-full-*.log
