@@ -220,8 +220,8 @@ performance experiment**. Group 5 is the result check: it re-simulates peak
 the committed run on edge time loss, departure delay and arrivals, and the
 signs the README states to hold (ramp metering lowers edge time loss but raises
 edge time loss plus departure delay; upstream VSL lowers the latter). On
-Windows with the same PyPI build, those three scenarios matched the committed
-run exactly. The other nine scenarios are not re-simulated at full length in
+3 November 2026, with the same PyPI build on Windows and on the Linux CI
+runner, those three scenarios matched the committed run exactly. The other nine scenarios are not re-simulated at full length in
 CI.
 
 What `check_run.py` covers, and what it does not:

@@ -74,8 +74,8 @@ python scripts/sumo/check_rerun.py runs/full-base runs/full-rm
 Simulation requires SUMO and TraCI tools (`SUMO_HOME` or `--sumo-binary`). The
 build CI uses is the PyPI one: `pip install eclipse-sumo==1.24.0 traci==1.24.0`,
 then point `SUMO_HOME` at `python -c "import sumo; print(sumo.SUMO_HOME)"`. With
-it, peak `base`, `rm` and `vsl_up` re-simulated on Windows on 3 November 2026
-matched the committed run exactly. Uses the
+it, peak `base`, `rm` and `vsl_up` re-simulated on 3 November 2026, on Windows and
+on the Linux CI runner, matched the committed run exactly (CI requires 2%). Uses the
 recovered 0.5-second step, seed 42 and 0.15/0.20 occupancy thresholds. No model or
 dataset download is needed; the published network and demand files are sufficient.
 
