@@ -4,9 +4,9 @@
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
-        <net-file value="C:\Users\LW\Desktop\5203project\peak\aye_bottleneck_net.xml"/>
-        <route-files value="C:\Users\LW\Desktop\5203project\peak\peak_demand_rou.xml"/>
-        <additional-files value="C:\Users\LW\Desktop\5203project\peak\aye_additional_add.xml"/>
+        <net-file value="aye_bottleneck_net.xml"/>
+        <route-files value="peak_demand_rou.xml"/>
+        <additional-files value="aye_additional_add.xml"/>
     </input>
 
     <time>

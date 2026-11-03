@@ -163,6 +163,21 @@ reported result. It must not be presented as reproduced by this new run.
 The new within-run comparison is in `comparison.md`; no historical result
 has been overwritten or relabelled as the new measurement.
 
+The report (`latex/report.tex`, 26 April 2026) is kept unchanged as a
+historical document. Three of its statements do not hold up against the
+recovered code and the rerun:
+
+- it frames the controller as ALINEA-style local feedback at a 20% downstream
+  occupancy; the recovered rule is a two-state switch, and its "occupancy" is
+  the lane-fill fraction defined above, not a detector reading (the report
+  itself calls the controller a discrete two-state approximation);
+- its −22.7% / −7.7% do not reproduce;
+- it recommends ramp metering alone. That recommendation rests on edge time
+  loss. Adding the departure delay of vehicles held before entry
+  (`tripinfo_completed_depart_delay_s`), ramp metering is higher than do-nothing
+  in both periods and upstream VSL is the lowest of the six, in this one-seed
+  rerun. The two rankings are in `comparison.md` and `combined_delay.csv`.
+
 ## Regression and CI
 
 ```bash
@@ -182,16 +197,32 @@ pip install -r requirements.txt && python latex/make_figures.py
 # 4. A fresh short run of all twelve scenarios (needs SUMO).
 python scripts/sumo/run_scenarios.py --all --end 120 --jobs 2 --vsl-threshold 0.01 --rm-threshold 0.01 --output runs/smoke --compress-xml
 python scripts/sumo/check_run.py runs/smoke
+
+# 5. Full-horizon reruns of the scenarios behind the headline, at the original
+#    thresholds, compared with the committed run (needs SUMO).
+for s in base rm vsl_up; do
+  python scripts/sumo/run_scenarios.py --period peak --scenario $s --output runs/full-$s --compress-xml
+done
+python scripts/sumo/check_rerun.py runs/full-base runs/full-rm runs/full-vsl_up
 ```
 
-CI runs those four groups in that order and uploads the smoke run's raw outputs
-and control traces. Groups 1-3 run before SUMO is installed, so they fail loudly
-if they ever start depending on a simulator being present.
+CI runs those five groups in that order, on SUMO 1.24.0 installed from PyPI
+(`eclipse-sumo==1.24.0`, `traci==1.24.0`), and uploads the runs' raw outputs
+and control traces. Groups 1-3 run before SUMO is installed, so they fail
+loudly if they ever start depending on a simulator being present; they also run
+on Windows.
 
 The smoke run deliberately lowers both thresholds so the short traffic sample
 activates every controller. **It is a software integration check, not a
-performance experiment**. The full committed run uses the original 0.15/0.20
-thresholds and completes all demand.
+performance experiment**. Group 5 is the result check: it re-simulates peak
+`base`, `rm` and `vsl_up` over the full 5,400 s horizon at the original
+0.15/0.20 thresholds, and `check_rerun.py` requires each to stay within 2% of
+the committed run on edge time loss, departure delay and arrivals, and the
+signs the README states to hold (ramp metering lowers edge time loss but raises
+edge time loss plus departure delay; upstream VSL lowers the latter). On
+3 November 2026, with the same PyPI build on Windows and on the Linux CI
+runner, those three scenarios matched the committed run exactly. The other nine scenarios are not re-simulated at full length in
+CI.
 
 What `check_run.py` covers, and what it does not:
 
@@ -207,10 +238,11 @@ What `check_run.py` covers, and what it does not:
 - `provenance.json` is not covered by a digest it stores itself, so an edit
   applied consistently to both `metrics.json` and `provenance.json` would pass.
 
-`comparison.md` and `historical_comparison.csv` are derived from `summary.csv`,
-so `check_run.py` does not hash them. They are checked separately, in the same
-CI step, by `compare_history.py --check`: it regenerates both into a temporary
-directory and compares them byte for byte with the committed copies. That
+`comparison.md`, `historical_comparison.csv` and `combined_delay.csv` are
+derived from `summary.csv`, so `check_run.py` does not hash them. They are
+checked separately, in the same CI step, by `compare_history.py --check`: it
+regenerates all three into a temporary directory and compares them byte for
+byte with the committed copies. That
 matters for `comparison.md` in particular, because README.md links a reader
 straight to it. `run_manifest.json` is not covered by either check; the runner
 writes it, and `check_run.py` reads only its `status` and `completed` fields.

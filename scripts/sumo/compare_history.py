@@ -7,6 +7,38 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+SCENARIOS = ("base", "vsl", "vsl_up", "rm", "vsl_rm", "vsl_up_rm")
+EDGE = "net_total_timeloss_veh_s"
+ENTRY = "tripinfo_completed_depart_delay_s"
+
+
+def combined_rows(new):
+    """Edge time loss plus the delay of vehicles held before they enter the network.
+
+    `net_total_timeloss_veh_s` only sees vehicles once they are on a modelled
+    edge. Ramp metering holds vehicles at the entry, so its edge saving is
+    partly a transfer into `tripinfo_completed_depart_delay_s`. Both columns
+    are already in summary.csv; this adds them and ranks the six strategies
+    under each measure, so the ranking a reader sees does not depend on which
+    of the two columns they happened to look at.
+    """
+    rows = []
+    for period in ("peak", "offpeak"):
+        edge = {s: float(new[(period, s)][EDGE]) for s in SCENARIOS}
+        entry = {s: float(new[(period, s)][ENTRY]) for s in SCENARIOS}
+        combined = {s: round(edge[s] + entry[s], 2) for s in SCENARIOS}
+        edge_rank = {s: i + 1 for i, s in enumerate(sorted(SCENARIOS, key=edge.get))}
+        combined_rank = {s: i + 1 for i, s in enumerate(sorted(SCENARIOS, key=combined.get))}
+        for s in SCENARIOS:
+            rows.append({
+                "period": period, "scenario": s,
+                "edge_time_loss_veh_s": edge[s], "entry_delay_veh_s": entry[s],
+                "combined_veh_s": combined[s],
+                "edge_vs_base_pct": round(100 * (edge[s] / edge["base"] - 1), 2),
+                "combined_vs_base_pct": round(100 * (combined[s] / combined["base"] - 1), 2),
+                "edge_rank": edge_rank[s], "combined_rank": combined_rank[s],
+            })
+    return rows
 
 
 def read_rows(path):
@@ -38,12 +70,35 @@ def compare(output, quiet=False):
         effects = [100 * (float(data[(period, "rm")]["net_total_timeloss_veh_s"]) /
                           float(data[(period, "base")]["net_total_timeloss_veh_s"]) - 1) for data in (old, new)]
         lines.append(f"| {period} | {effects[0]:+.2f}% | {effects[1]:+.2f}% |")
+    combined = combined_rows(new)
+    lines += ["", "## New run: edge time loss plus entry delay", "",
+              "The table above, like the historical one, counts only time lost on modelled edges. "
+              "Vehicles held before entry (ramp metering's queue) appear in tripinfo `departDelay` instead. "
+              "Rank 1 is the lowest of the six strategies in that period. This is one run with one seed; "
+              "the seed and simulator version are in run_manifest.json and each provenance.json.", "",
+              "| Period | Scenario | Edge time loss (veh-s) | Entry delay (veh-s) | Edge + entry (veh-s) | Edge vs base | Edge + entry vs base | Rank, edge | Rank, edge + entry |",
+              "|---|---|---:|---:|---:|---:|---:|---:|---:|"]
+    for row in combined:
+        lines.append(f"| {row['period']} | {row['scenario']} | {row['edge_time_loss_veh_s']:,.1f} | "
+                     f"{row['entry_delay_veh_s']:,.1f} | {row['combined_veh_s']:,.1f} | "
+                     f"{row['edge_vs_base_pct']:+.2f}% | {row['combined_vs_base_pct']:+.2f}% | "
+                     f"{row['edge_rank']} | {row['combined_rank']} |")
+    for period in ("peak", "offpeak"):
+        mine = [r for r in combined if r["period"] == period]
+        best_edge = min(mine, key=lambda r: r["edge_rank"])["scenario"]
+        best_combined = min(mine, key=lambda r: r["combined_rank"])["scenario"]
+        lines.append("")
+        lines.append(f"{period}: lowest edge time loss `{best_edge}`; lowest edge + entry `{best_combined}`.")
     lines += ["", "The numerical disagreement remains unresolved. No thresholds or demand inputs were tuned to match the old table.",
               "See ../../docs/REPRODUCTION.md for provenance, input equivalence, simulator version and the legacy metric definitions.", ""]
     with (output / "historical_comparison.csv").open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=rows[0])
         writer.writeheader()
         writer.writerows(rows)
+    with (output / "combined_delay.csv").open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=combined[0])
+        writer.writeheader()
+        writer.writerows(combined)
     # The committed evidence keeps CRLF bytes (see .gitattributes); write them explicitly so the
     # byte-for-byte check gives the same answer on Linux CI as on the Windows machine that ran SUMO.
     (output / "comparison.md").write_text("\n".join(lines), encoding="utf-8", newline="\r\n")
@@ -51,7 +106,7 @@ def compare(output, quiet=False):
         print(output / "comparison.md")
 
 
-DERIVED = ("comparison.md", "historical_comparison.csv")
+DERIVED = ("comparison.md", "historical_comparison.csv", "combined_delay.csv")
 
 
 def check(output):
@@ -76,8 +131,7 @@ def check(output):
     if problems:
         raise ValueError(f"{output}: " + "; ".join(problems)
                          + f"; regenerate with scripts/sumo/compare_history.py {output}")
-    print(f"PASS: {output} comparison.md and historical_comparison.csv "
-          "follow from summary.csv")
+    print(f"PASS: {output} {', '.join(DERIVED)} follow from summary.csv")
 
 
 if __name__ == "__main__":

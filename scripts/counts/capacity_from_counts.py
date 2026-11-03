@@ -196,6 +196,10 @@ def _analyse_sheet(workbook_path, sheet_name, cells, header_row, total_column):
         "workbook_total_veh": stored_total,
         "survey_minutes": minutes,
         "capacity_veh_h": total * 60.0 / minutes,
+        # The sheet divides by its formula's minutes even though some one-minute
+        # rows are empty; the mean over the rows that do hold data is reported
+        # alongside so the effect of that denominator choice is visible.
+        "rate_over_rows_with_data_veh_h": total * 60.0 / rows_with_data,
         "negative_cells": sorted(negatives, key=lambda n: n["cell"]),
         "negative_net_veh": sum(n["value"] for n in negatives),
     }
@@ -216,7 +220,10 @@ def format_report(result):
         f"total               {result['total_veh']} veh"
         f"   (workbook stores {result['workbook_total_veh']})",
         f"survey duration     {result['survey_minutes']:g} min (from the workbook formula)",
-        f"capacity            {result['capacity_veh_h']:.4f} veh/h",
+        f"capacity            {result['capacity_veh_h']:.4f} veh/h"
+        f"   (total / {result['survey_minutes']:g} min, as the workbook does)",
+        f"mean over data rows {result['rate_over_rows_with_data_veh_h']:.4f} veh/h"
+        f"   (total / {result['rows_with_data']} rows that hold data)",
     ]
     if result["negative_cells"]:
         cells = ", ".join(f"{n['cell']}={n['value']}" for n in result["negative_cells"])

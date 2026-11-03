@@ -1,3 +1,11 @@
+# Text files are stored and checked out with LF on every platform; the two
+# Windows batch files keep CRLF so cmd.exe parses their labels correctly.
+* text=auto eol=lf
+*.bat text eol=crlf
+# Binary inputs and outputs are never touched.
+*.xlsx binary
+*.pdf binary
+*.gz binary
 latex/** linguist-documentation
 docs/** linguist-documentation
 scripts/sumo/*.py text eol=lf
